@@ -5,7 +5,6 @@ class AuthRepository {
   final ApiClient _apiClient = ApiClient();
 
   Future<bool> login(String email, String password) async {
-    try {
       final response = await _apiClient.post(
         ApiEndpoints.login,
         {
@@ -19,9 +18,6 @@ class AuthRepository {
         return true;
       }
       return false;
-    } catch (e) {
-      rethrow;
-    }
   }
 
   Future<void> logout() async {
