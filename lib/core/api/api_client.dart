@@ -57,7 +57,7 @@ class ApiClient {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
-      deleteToken();
+      deleteToken(); // Token löschen, wenn nicht autorisiert
       throw Exception('Nicht autorisiert (401). Bitte erneut anmelden.');
     } else {
       throw Exception('API Fehler [${response.statusCode}]: ${response.body}');
