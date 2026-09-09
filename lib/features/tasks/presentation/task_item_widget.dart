@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
+
 import '../data/task_model.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/glass_container.dart';
 
 class TaskItemWidget extends StatelessWidget {
   final Task task;
   final VoidCallback? onStatusChanged;
 
-  const TaskItemWidget({
-    super.key,
-    required this.task,
-    this.onStatusChanged,
-  });
+  const TaskItemWidget({super.key, required this.task, this.onStatusChanged});
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'done':
-        return Colors.green;
+        return AppColors.accent;
       case 'in_progress':
-        return Colors.orange;
+        return AppColors.primary;
       case 'pending':
       default:
         return Colors.blueGrey;
@@ -40,10 +39,9 @@ class TaskItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(task.status);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: GlassContainer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -54,26 +52,28 @@ class TaskItemWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     task.containerTitle.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                      letterSpacing: 0.8,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Text(
                     _getStatusLabel(task.status),
                     style: TextStyle(
-                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: statusColor,
                     ),
@@ -81,47 +81,51 @@ class TaskItemWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
 
             // Title
             Text(
               task.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
 
             // Description
             Text(
               task.description,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[800],
-              ),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const Divider(height: 20),
+            const Divider(height: AppSpacing.lg),
 
             // Meta Info (Creator & Deadline)
             Row(
               children: [
-                Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.xs),
                 Text(
                   task.creatorName.trim(),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: Theme.of(context).textTheme.labelMedium,
                 ),
                 const Spacer(),
-                Icon(Icons.event_outlined, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
+                Icon(
+                  Icons.event_outlined,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.xs),
                 // Safe access using formattedDeadline getter (prevents null errors)
                 Text(
                   task.formattedDeadline,
                   style: TextStyle(
-                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: task.deadline != null ? Colors.grey[800] : Colors.grey[500],
+                    color: task.deadline != null
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
