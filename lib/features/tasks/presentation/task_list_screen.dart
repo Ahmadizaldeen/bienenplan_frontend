@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../data/task_model.dart';
 import '../data/task_repository.dart';
 import 'task_item_widget.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../auth/presentation/login_screen.dart';
+import '../../auth/presentation/start_screen.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/glass_container.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
@@ -32,21 +35,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void _handleLogout() async {
     await _authRepository.logout();
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const StartScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Icons.hive, color: Color(0xFFFFB703)),
-            SizedBox(width: 8),
-            Text('Aufgaben Übersicht', style: TextStyle(fontWeight: FontWeight.bold)),
+            Icon(Icons.hive_outlined),
+            SizedBox(width: AppSpacing.sm),
+            Text('Aufgabenübersicht'),
           ],
         ),
         actions: [
@@ -62,69 +64,99 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => _refreshTasks(),
-        child: FutureBuilder<List<Task>>(
-          future: _tasksFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Fehler beim Laden:',
-                        style: Theme.of(context).textTheme.titleMedium,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.accent],
+              ),
+            ),
+          ),
+          RefreshIndicator(
+            onRefresh: () async => _refreshTasks(),
+            child: FutureBuilder<List<Task>>(
+              future: _tasksFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: GlassContainer(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Fehler beim Laden',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              snapshot.error.toString().replaceAll(
+                                'Exception: ',
+                                '',
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            ElevatedButton.icon(
+                              onPressed: _refreshTasks,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Erneut versuchen'),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        snapshot.error.toString().replaceAll('Exception: ', ''),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: GlassContainer(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.task_alt,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'Keine Aufgaben vorhanden.',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _refreshTasks,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Erneut versuchen'),
-                      )
-                    ],
-                  ),
-                ),
-              );
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.task_alt, size: 64, color: Colors.grey),
-                    SizedBox(height: 12),
-                    Text('Keine Aufgaben vorhanden.', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                  ],
-                ),
-              );
-            }
+                    ),
+                  );
+                }
 
-            final tasks = snapshot.data!;
+                final tasks = snapshot.data!;
 
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                return TaskItemWidget(
-                  task: tasks[index],
-                  onStatusChanged: _refreshTasks,
+                return ListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    return TaskItemWidget(
+                      task: tasks[index],
+                      onStatusChanged: _refreshTasks,
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

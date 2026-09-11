@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/glass_container.dart';
 import '../data/auth_repository.dart';
 import '../../tasks/presentation/task_list_screen.dart';
 
@@ -10,48 +13,70 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Der Form-Key ermöglicht es, die Validierung des gesamten Formulars zu starten.
   final _formKey = GlobalKey<FormState>();
+
+  // Controller lesen den aktuellen Text aus den Eingabefeldern aus.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Das Repository kapselt die Kommunikation mit der Login-API.
   final _authRepository = AuthRepository();
+
+  // ob Ladeindikator angezeigt wird.
   bool _isLoading = false;
+
+  // Steuert, ob das Passwort als Punkte oder als Klartext dargestellt wird.
   bool _obscurePassword = true;
 
   @override
   void dispose() {
+    // Controller besitzen Ressourcen und müssen beim Entfernen des Widgets
+    // freigegeben werden, damit kein Speicherleck entsteht.
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
+  // Prüft die Eingaben, ruft die API auf und navigiert bei Erfolg weiter.
+  Future<void> _login() async {
+    // Bei ungültigen Eingaben wird die API gar nicht erst aufgerufen.
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-
     try {
+      
       final success = await _authRepository.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
+      // Das Widget könnte während des Wartens geschlossen worden sein.
       if (!mounted) return;
 
       if (success) {
+        // pushReplacement öffnet die Aufgabenliste und entfernt den Login aus
+        // dem Zurück-Verlauf, damit man nicht zurück zum Login navigiert.
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const TaskListScreen()),
         );
       } else {
+        // false bedeutet: Die API antwortete, aber der Login war nicht erfolgreich.
         _showErrorSnackBar('Anmeldung fehlgeschlagen. Ungültige Zugangsdaten.');
       }
     } catch (e) {
+      // Netzwerk- oder Serverfehler werden hier abgefangen und angezeigt.
       if (!mounted) return;
-      _showErrorSnackBar('Fehler: ${e.toString().replaceAll('Exception: ', '')}');
+      _showErrorSnackBar(
+        'Fehler: ${e.toString().replaceAll('Exception: ', '')}',
+      );
     } finally {
+      // Der Ladeindikator wird nach Erfolg, Misserfolg oder Fehler beendet.
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // Zeigt eine kurze Fehlermeldung am unteren Bildschirmrand an.
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -63,132 +88,106 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+    // build beschreibt die komplette sichtbare Oberfläche des Bildschirms.
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo / Header
-                  Icon(
-                    Icons.hive_rounded,
-                    size: 72,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Bienenplan',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF023047),
-                    ),
-                  ),
-                  Text(
-                    'Melde dich an, um deine Aufgaben zu verwalten',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-
-                  // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'E-Mail Adresse',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Bitte E-Mail eingeben';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Gültige E-Mail Adresse eingeben';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Passwort',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Bitte Passwort eingeben';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Submit Button
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: Colors.black87,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2.5),
-                            )
-                          : const Text(
-                              'Anmelden',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
+      body: Stack(
+        children: [
+          // Der Hintergrund liegt hinter dem Login-Formular.
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.accent],
               ),
             ),
           ),
-        ),
+          // Das Formular wird zentriert und in den vorhandenen Glas-Container gelegt.
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: GlassContainer(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'BienenPlan',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    // Form verbindet die Eingabefelder und ihre Validatoren.
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              labelText: 'E-Mail',
+                            ),
+                            // Validator gibt null bei gültiger Eingabe oder
+                            // einen Text für die Fehlermeldung zurück.
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Bitte E-Mail eingeben.';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Bitte eine gültige E-Mail eingeben.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Passwort',
+                              suffixIcon: IconButton(
+                                // setState aktualisiert Icon und Passwortdarstellung.
+                                tooltip: _obscurePassword
+                                    ? 'Passwort anzeigen'
+                                    : 'Passwort ausblenden',
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Bitte Passwort eingeben.';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    // Während des Login-Aufrufs wird der Button durch einen
+                    // Ladeindikator ersetzt, damit nicht mehrfach gesendet wird.
+                    _isLoading
+                        ? const CircularProgressIndicator()
+                        : ElevatedButton(
+                            onPressed: _login,
+                            child: const Text('Login'),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -48,3 +48,4 @@ app.*.map.json
 .widget_preview/
 /docs/
 
+.github/agents/bienenplan-flutter.agent.md
