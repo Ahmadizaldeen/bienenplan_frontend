@@ -49,3 +49,6 @@ app.*.map.json
 /docs/
 
 .github/agents/bienenplan-flutter.agent.md
+test/dependency_injection_test.dart
+AGENTS.md
+.github/skills/flutter-clean-architecture/SKILL.md
