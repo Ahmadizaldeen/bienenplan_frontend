@@ -9,15 +9,21 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({super.key});
+  TaskListScreen({
+    super.key,
+    TaskRepository? taskRepository,
+    AuthRepository? authRepository,
+  })  : taskRepository = taskRepository ?? TaskRepository(),
+        authRepository = authRepository ?? AuthRepository();
+
+  final TaskRepository taskRepository;
+  final AuthRepository authRepository;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  final TaskRepository _taskRepository = TaskRepository();
-  final AuthRepository _authRepository = AuthRepository();
   late Future<List<Task>> _tasksFuture;
 
   @override
@@ -28,16 +34,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   void _refreshTasks() {
     setState(() {
-      _tasksFuture = _taskRepository.fetchTasks();
+      _tasksFuture = widget.taskRepository.fetchTasks();
     });
   }
 
   void _handleLogout() async {
-    await _authRepository.logout();
+    await widget.authRepository.logout();
     if (!mounted) return;
     Navigator.of(
       context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const StartScreen()));
+    ).pushReplacement(MaterialPageRoute(builder: (_) => StartScreen()));
   }
 
   @override
@@ -143,13 +149,55 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
                 final tasks = snapshot.data!;
 
+                // Aufgaben nach Container gruppieren, Reihenfolge bleibt erhalten.
+                final Map<int, List<Task>> grouped = {};
+                final Map<int, String> containerTitles = {};
+                for (final task in tasks) {
+                  grouped.putIfAbsent(task.containerId, () => []).add(task);
+                  containerTitles.putIfAbsent(
+                    task.containerId,
+                    () => task.containerTitle,
+                  );
+                }
+                final containerIds = grouped.keys.toList();
+
                 return ListView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: tasks.length,
+                  itemCount: containerIds.length,
                   itemBuilder: (context, index) {
-                    return TaskItemWidget(
-                      task: tasks[index],
-                      onStatusChanged: _refreshTasks,
+                    final containerId = containerIds[index];
+                    final containerTasks = grouped[containerId]!;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: GlassContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              containerTitles[containerId] ?? '',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const Divider(height: AppSpacing.lg),
+                            Column(
+                              children: [
+                                for (final task in containerTasks)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: AppSpacing.sm,
+                                    ),
+                                    child: TaskItemWidget(
+                                      task: task,
+                                      onStatusChanged: _refreshTasks,
+                                      showContainerBadge: false,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 );
