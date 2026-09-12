@@ -53,7 +53,7 @@ class BienenPlan extends StatelessWidget {
 
           // Angemeldete Benutzer starten direkt bei den Aufgaben.
           // Ohne Token beginnt der Ablauf auf dem Startscreen.
-          return hasToken ? const TaskListScreen() : const StartScreen();
+          return hasToken ? TaskListScreen() : StartScreen();
         },
       ),
     );
