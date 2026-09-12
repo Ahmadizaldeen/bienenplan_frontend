@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../application/task_controller.dart';
 import '../data/task_model.dart';
 import '../data/task_repository.dart';
 import 'task_item_widget.dart';
@@ -13,8 +14,8 @@ class TaskListScreen extends StatefulWidget {
     super.key,
     TaskRepository? taskRepository,
     AuthRepository? authRepository,
-  })  : taskRepository = taskRepository ?? TaskRepository(),
-        authRepository = authRepository ?? AuthRepository();
+  }) : taskRepository = taskRepository ?? TaskRepository(),
+       authRepository = authRepository ?? AuthRepository();
 
   final TaskRepository taskRepository;
   final AuthRepository authRepository;
@@ -24,26 +25,37 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  late Future<List<Task>> _tasksFuture;
+  late final TaskController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = TaskController(taskRepository: widget.taskRepository);
+    _controller.addListener(_handleControllerUpdate);
     _refreshTasks();
   }
 
-  void _refreshTasks() {
-    setState(() {
-      _tasksFuture = widget.taskRepository.fetchTasks();
-    });
+  void _handleControllerUpdate() {
+    if (!mounted) return;
+    setState(() {});
   }
 
-  void _handleLogout() async {
+  void _refreshTasks() {
+    _controller.loadTasks();
+  }
+
+  Future<void> _handleLogout() async {
     await widget.authRepository.logout();
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => StartScreen()));
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => StartScreen()));
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleControllerUpdate);
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -83,129 +95,124 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
           RefreshIndicator(
             onRefresh: () async => _refreshTasks(),
-            child: FutureBuilder<List<Task>>(
-              future: _tasksFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: GlassContainer(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'Fehler beim Laden',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              snapshot.error.toString().replaceAll(
-                                'Exception: ',
-                                '',
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            ElevatedButton.icon(
-                              onPressed: _refreshTasks,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Erneut versuchen'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: GlassContainer(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.task_alt,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'Keine Aufgaben vorhanden.',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final tasks = snapshot.data!;
-
-                // Aufgaben nach Container gruppieren, Reihenfolge bleibt erhalten.
-                final Map<int, List<Task>> grouped = {};
-                final Map<int, String> containerTitles = {};
-                for (final task in tasks) {
-                  grouped.putIfAbsent(task.containerId, () => []).add(task);
-                  containerTitles.putIfAbsent(
-                    task.containerId,
-                    () => task.containerTitle,
-                  );
-                }
-                final containerIds = grouped.keys.toList();
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: containerIds.length,
-                  itemBuilder: (context, index) {
-                    final containerId = containerIds[index];
-                    final containerTasks = grouped[containerId]!;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: GlassContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              containerTitles[containerId] ?? '',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const Divider(height: AppSpacing.lg),
-                            Column(
-                              children: [
-                                for (final task in containerTasks)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: AppSpacing.sm,
-                                    ),
-                                    child: TaskItemWidget(
-                                      task: task,
-                                      onStatusChanged: _refreshTasks,
-                                      showContainerBadge: false,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            child: _buildContent(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_controller.isLoading && _controller.tasks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_controller.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: GlassContainer(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Fehler beim Laden',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(_controller.errorMessage!, textAlign: TextAlign.center),
+                const SizedBox(height: AppSpacing.md),
+                ElevatedButton.icon(
+                  onPressed: _refreshTasks,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Erneut versuchen'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_controller.tasks.isEmpty) {
+      return Center(
+        child: GlassContainer(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.task_alt,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Keine Aufgaben vorhanden.',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _buildTaskList(_controller.tasks);
+  }
+
+  Widget _buildTaskList(List<Task> tasks) {
+    final grouped = <int, List<Task>>{};
+    final containerTitles = <int, String>{};
+
+    for (final task in tasks) {
+      grouped.putIfAbsent(task.containerId, () => []).add(task);
+      containerTitles.putIfAbsent(task.containerId, () => task.containerTitle);
+    }
+
+    final containerIds = grouped.keys.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      itemCount: containerIds.length,
+      itemBuilder: (context, index) {
+        final containerId = containerIds[index];
+        final containerTasks = grouped[containerId]!;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  containerTitles[containerId] ?? '',
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Divider(height: AppSpacing.lg),
+                Column(
+                  children: [
+                    for (final task in containerTasks)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: TaskItemWidget(
+                          task: task,
+                          onStatusChanged: _refreshTasks,
+                          showContainerBadge: false,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
