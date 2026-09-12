@@ -15,26 +15,36 @@ class AuthRepository implements AuthRepositoryContract {
 
   /// Versucht, eine detaillierte Error-Message aus dem Backend-Response zu extrahieren.
   /// Backend kann JSON zurückgeben wie: {"message": "...", "error": "...", "errors": {...}}
-  static String _extractErrorMessage(String responseBody) {
-    try {
-      final json = jsonDecode(responseBody) as Map<String, dynamic>;
+  static String _extractErrorMessage(
+    String? responseBody, {
+    required String fallbackMessage,
+  }) {
+    if (responseBody != null && responseBody.isNotEmpty) {
+      try {
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
 
-      // Priorisierte Felder in der Reihenfolge: message > error > errors
-      if (json['message'] != null) {
-        return json['message'].toString();
+        // Priorisierte Felder in der Reihenfolge: message > error > errors
+        if (json['message'] != null && json['message'].toString().isNotEmpty) {
+          return json['message'].toString();
+        }
+        if (json['error'] != null && json['error'].toString().isNotEmpty) {
+          return json['error'].toString();
+        }
+        if (json['errors'] != null && json['errors'] is Map) {
+          // Mehrere Fehler kombinieren
+          final errors = json['errors'] as Map<String, dynamic>;
+          final messages = errors.values
+              .map((e) => e.toString())
+              .where((s) => s.isNotEmpty);
+          if (messages.isNotEmpty) {
+            return messages.join(', ');
+          }
+        }
+      } catch (_) {
+        // Fallback wenn JSON-Parse fehlschlägt
       }
-      if (json['error'] != null) {
-        return json['error'].toString();
-      }
-      if (json['errors'] != null && json['errors'] is Map) {
-        // Mehrere Fehler kombinieren
-        final errors = json['errors'] as Map<String, dynamic>;
-        return errors.values.map((e) => e.toString()).join(', ');
-      }
-    } catch (_) {
-      // Fallback wenn JSON-Parse fehlschlägt
     }
-    return 'Registrierung fehlgeschlagen. Bitte versuche es später erneut.';
+    return fallbackMessage;
   }
 
   @override
@@ -51,10 +61,15 @@ class AuthRepository implements AuthRepositoryContract {
       }
       return false;
     } on ApiException catch (error) {
-      // 401 bedeutet beim Login: Die Zugangsdaten wurden abgelehnt.
-      // Andere API-Fehler werden an die UI weitergegeben.
-      if (error.statusCode == 401) return false;
-      rethrow;
+      final detailedMessage = _extractErrorMessage(
+        error.responseBody,
+        fallbackMessage: 'Anmeldung fehlgeschlagen. Ungültige Zugangsdaten.',
+      );
+      throw ApiException(
+        statusCode: error.statusCode,
+        message: detailedMessage,
+        responseBody: error.responseBody,
+      );
     }
   }
 
@@ -82,18 +97,16 @@ class AuthRepository implements AuthRepositoryContract {
 
       return false;
     } on ApiException catch (error) {
-      // 409 = Email existiert bereits, 422 = Validierungsfehler
-      if (error.statusCode == 409 || error.statusCode == 422) {
-        // Extrahiere detaillierte Error-Message aus Backend-Response
-        final detailedMessage = _extractErrorMessage(
-          error.responseBody ?? '{}',
-        );
-        throw ApiException(
-          statusCode: error.statusCode,
-          message: detailedMessage,
-        );
-      }
-      rethrow;
+      final detailedMessage = _extractErrorMessage(
+        error.responseBody,
+        fallbackMessage:
+            'Registrierung fehlgeschlagen. Bitte versuche es später erneut.',
+      );
+      throw ApiException(
+        statusCode: error.statusCode,
+        message: detailedMessage,
+        responseBody: error.responseBody,
+      );
     }
   }
 
