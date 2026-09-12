@@ -1,8 +1,9 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'api_exception.dart';
 
+import 'api_exception.dart';
 
 class ApiClient {
   final _storage = const FlutterSecureStorage();
@@ -64,7 +65,8 @@ class ApiClient {
     } else {
       throw ApiException(
         statusCode: response.statusCode,
-        message: 'API Fehler [${response.statusCode}]: ${response.body}',
+        message: 'API Fehler [${response.statusCode}]',
+        responseBody: response.body, // Speichere den rohen Body
       );
     }
   }
