@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/routing/app_router.dart';
 import '../application/task_controller.dart';
 import '../data/task_model.dart';
 import '../data/task_repository.dart';
 import 'task_item_widget.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../auth/presentation/start_screen.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 
@@ -47,8 +47,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   Future<void> _handleLogout() async {
     await widget.authRepository.logout();
     if (!mounted) return;
-    Navigator.of(context)
-        .pushReplacement(MaterialPageRoute(builder: (_) => StartScreen()));
+    AppRouter.replaceWithLogin(context);
   }
 
   @override

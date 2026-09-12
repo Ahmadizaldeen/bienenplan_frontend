@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
-import 'login_screen.dart';
 import 'register_screen.dart';
 
 class StartScreen extends StatefulWidget {
-  StartScreen({
-    super.key,
-    ApiClient? apiClient,
-  }) : apiClient = apiClient ?? ApiClient();
+  StartScreen({super.key, ApiClient? apiClient})
+    : apiClient = apiClient ?? ApiClient();
 
   final ApiClient apiClient;
 
@@ -20,7 +18,6 @@ class StartScreen extends StatefulWidget {
 }
 
 class _StartScreenState extends State<StartScreen> {
-
   // Während der Anfrage wird der Info-Button deaktiviert und ein Spinner gezeigt.
   bool _isCheckingApi = false;
 
@@ -141,11 +138,7 @@ class _StartScreenState extends State<StartScreen> {
                       child: ElevatedButton.icon(
                         // push öffnet den Login über dem Startscreen.
                         // pop im Login führt später wieder hierher zurück.
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => LoginScreen(),
-                          ),
-                        ),
+                        onPressed: () => AppRouter.goToLogin(context),
                         icon: const Icon(Icons.login),
                         label: const Text('Anmelden'),
                       ),

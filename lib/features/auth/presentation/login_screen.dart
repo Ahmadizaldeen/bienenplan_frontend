@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
-import '../../tasks/presentation/task_list_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({
-    super.key,
-    AuthRepository? authRepository,
-  }) : authRepository = authRepository ?? AuthRepository();
+  LoginScreen({super.key, AuthRepository? authRepository})
+    : authRepository = authRepository ?? AuthRepository();
 
   final AuthRepository authRepository;
 
@@ -65,9 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => TaskListScreen()),
-      );
+      AppRouter.replaceWithTaskList(context);
     } else if (_controller.errorMessage != null) {
       _showErrorSnackBar(_controller.errorMessage!);
     }
