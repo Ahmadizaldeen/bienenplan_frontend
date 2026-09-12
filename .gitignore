@@ -52,3 +52,6 @@ app.*.map.json
 test/dependency_injection_test.dart
 AGENTS.md
 .github/skills/flutter-clean-architecture/SKILL.md
+test/controllers_test.dart
+test/app_router_test.dart
+lib/features/auth/presentation/start_screen.dart
