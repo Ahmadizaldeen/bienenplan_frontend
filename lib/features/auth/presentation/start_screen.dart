@@ -5,7 +5,6 @@ import '../../../core/api/api_endpoints.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
-import 'register_screen.dart';
 
 class StartScreen extends StatefulWidget {
   StartScreen({super.key, ApiClient? apiClient})
@@ -147,12 +146,7 @@ class _StartScreenState extends State<StartScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        // Die Registrierung ist momentan ein Platzhalter-Screen.
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        ),
+                        onPressed: () => AppRouter.goToRegister(context),
                         icon: const Icon(Icons.person_add_outlined),
                         label: const Text('Registrieren'),
                       ),
