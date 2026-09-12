@@ -59,7 +59,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
 
     if (success) {
-      AppRouter.replaceWithTaskList(context);
+      // Nach erfolgreicher Registrierung: zum Login
+      // (Kein Token von Register, User muss sich anmelden)
+      AppRouter.replaceWithLogin(context);
     } else if (_controller.errorMessage != null) {
       _showErrorSnackBar(_controller.errorMessage!);
     }
