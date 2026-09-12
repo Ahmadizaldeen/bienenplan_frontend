@@ -8,15 +8,18 @@ import 'login_screen.dart';
 import 'register_screen.dart';
 
 class StartScreen extends StatefulWidget {
-  const StartScreen({super.key});
+  StartScreen({
+    super.key,
+    ApiClient? apiClient,
+  }) : apiClient = apiClient ?? ApiClient();
+
+  final ApiClient apiClient;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
 class _StartScreenState extends State<StartScreen> {
-  // Der ApiClient enthält die allgemeine Logik für HTTP-Anfragen.
-  final _apiClient = ApiClient();
 
   // Während der Anfrage wird der Info-Button deaktiviert und ein Spinner gezeigt.
   bool _isCheckingApi = false;
@@ -30,7 +33,7 @@ class _StartScreenState extends State<StartScreen> {
     try {
       // baseUrl endet in diesem Projekt auf /api.
       // await wartet auf die Serverantwort, ohne die UI zu blockieren.
-      final response = await _apiClient.get(ApiEndpoints.baseUrl);
+      final response = await widget.apiClient.get(ApiEndpoints.baseUrl);
 
       // Der Screen könnte während der Anfrage geschlossen worden sein.
       // Dann darf hier nicht mehr auf seinen BuildContext zugegriffen werden.
@@ -140,7 +143,7 @@ class _StartScreenState extends State<StartScreen> {
                         // pop im Login führt später wieder hierher zurück.
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
+                            builder: (_) => LoginScreen(),
                           ),
                         ),
                         icon: const Icon(Icons.login),
