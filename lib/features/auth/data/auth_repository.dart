@@ -2,9 +2,15 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/api/api_exception.dart';
 
-class AuthRepository {
+abstract class AuthRepositoryContract {
+  Future<bool> login(String email, String password);
+  Future<void> logout();
+}
+
+class AuthRepository implements AuthRepositoryContract {
   final ApiClient _apiClient = ApiClient();
 
+  @override
   Future<bool> login(String email, String password) async {
     try {
       final response = await _apiClient.post(ApiEndpoints.login, {
@@ -25,6 +31,7 @@ class AuthRepository {
     }
   }
 
+  @override
   Future<void> logout() async {
     await _apiClient.deleteToken();
   }
