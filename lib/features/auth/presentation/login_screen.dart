@@ -7,10 +7,10 @@ import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({super.key, AuthRepository? authRepository})
+  LoginScreen({super.key, AuthRepositoryContract? authRepository})
     : authRepository = authRepository ?? AuthRepository();
 
-  final AuthRepository authRepository;
+  final AuthRepositoryContract authRepository;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

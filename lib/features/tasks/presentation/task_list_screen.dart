@@ -12,13 +12,13 @@ import '../../../core/theme/glass_container.dart';
 class TaskListScreen extends StatefulWidget {
   TaskListScreen({
     super.key,
-    TaskRepository? taskRepository,
-    AuthRepository? authRepository,
+    TaskRepositoryContract? taskRepository,
+    AuthRepositoryContract? authRepository,
   }) : taskRepository = taskRepository ?? TaskRepository(),
        authRepository = authRepository ?? AuthRepository();
 
-  final TaskRepository taskRepository;
-  final AuthRepository authRepository;
+  final TaskRepositoryContract taskRepository;
+  final AuthRepositoryContract authRepository;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
