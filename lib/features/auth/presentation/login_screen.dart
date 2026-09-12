@@ -6,7 +6,12 @@ import '../data/auth_repository.dart';
 import '../../tasks/presentation/task_list_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  LoginScreen({
+    super.key,
+    AuthRepository? authRepository,
+  }) : authRepository = authRepository ?? AuthRepository();
+
+  final AuthRepository authRepository;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,9 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controller lesen den aktuellen Text aus den Eingabefeldern aus.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Das Repository kapselt die Kommunikation mit der Login-API.
-  final _authRepository = AuthRepository();
 
   // ob Ladeindikator angezeigt wird.
   bool _isLoading = false;
@@ -46,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       
-      final success = await _authRepository.login(
+      final success = await widget.authRepository.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
@@ -58,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // pushReplacement öffnet die Aufgabenliste und entfernt den Login aus
         // dem Zurück-Verlauf, damit man nicht zurück zum Login navigiert.
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const TaskListScreen()),
+          MaterialPageRoute(builder: (_) => TaskListScreen()),
         );
       } else {
         // false bedeutet: Die API antwortete, aber der Login war nicht erfolgreich.
