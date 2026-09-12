@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
+import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 import '../../tasks/presentation/task_list_screen.dart';
 
@@ -25,16 +26,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // ob Ladeindikator angezeigt wird.
-  bool _isLoading = false;
+  late final AuthController _controller;
 
   // Steuert, ob das Passwort als Punkte oder als Klartext dargestellt wird.
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _controller = AuthController(authRepository: widget.authRepository);
+    _controller.addListener(_handleControllerUpdate);
+  }
+
+  void _handleControllerUpdate() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
   void dispose() {
-    // Controller besitzen Ressourcen und müssen beim Entfernen des Widgets
-    // freigegeben werden, damit kein Speicherleck entsteht.
+    _controller.removeListener(_handleControllerUpdate);
+    _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -45,36 +57,19 @@ class _LoginScreenState extends State<LoginScreen> {
     // Bei ungültigen Eingaben wird die API gar nicht erst aufgerufen.
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-    try {
-      
-      final success = await widget.authRepository.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+    final success = await _controller.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-      // Das Widget könnte während des Wartens geschlossen worden sein.
-      if (!mounted) return;
+    if (!mounted) return;
 
-      if (success) {
-        // pushReplacement öffnet die Aufgabenliste und entfernt den Login aus
-        // dem Zurück-Verlauf, damit man nicht zurück zum Login navigiert.
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => TaskListScreen()),
-        );
-      } else {
-        // false bedeutet: Die API antwortete, aber der Login war nicht erfolgreich.
-        _showErrorSnackBar('Anmeldung fehlgeschlagen. Ungültige Zugangsdaten.');
-      }
-    } catch (e) {
-      // Netzwerk- oder Serverfehler werden hier abgefangen und angezeigt.
-      if (!mounted) return;
-      _showErrorSnackBar(
-        'Fehler: ${e.toString().replaceAll('Exception: ', '')}',
+    if (success) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => TaskListScreen()),
       );
-    } finally {
-      // Der Ladeindikator wird nach Erfolg, Misserfolg oder Fehler beendet.
-      if (mounted) setState(() => _isLoading = false);
+    } else if (_controller.errorMessage != null) {
+      _showErrorSnackBar(_controller.errorMessage!);
     }
   }
 
@@ -178,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AppSpacing.lg),
                     // Während des Login-Aufrufs wird der Button durch einen
                     // Ladeindikator ersetzt, damit nicht mehrfach gesendet wird.
-                    _isLoading
+                    _controller.isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
                             onPressed: _login,
