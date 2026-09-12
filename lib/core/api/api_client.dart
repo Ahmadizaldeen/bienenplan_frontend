@@ -1,8 +1,9 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'api_exception.dart';
 
+import 'api_exception.dart';
 
 class ApiClient {
   final _storage = const FlutterSecureStorage();
@@ -60,11 +61,16 @@ class ApiClient {
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
       deleteToken(); // Token löschen, wenn nicht autorisiert
-      throw const ApiException(statusCode: 401, message: 'Nicht autorisiert.');
+      throw ApiException(
+        statusCode: 401,
+        message: 'Nicht autorisiert.',
+        responseBody: response.body,
+      );
     } else {
       throw ApiException(
         statusCode: response.statusCode,
-        message: 'API Fehler [${response.statusCode}]: ${response.body}',
+        message: 'API Fehler [${response.statusCode}]',
+        responseBody: response.body, // Speichere den rohen Body
       );
     }
   }

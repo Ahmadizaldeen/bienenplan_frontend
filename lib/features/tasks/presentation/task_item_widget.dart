@@ -7,8 +7,14 @@ import '../../../core/theme/glass_container.dart';
 class TaskItemWidget extends StatelessWidget {
   final Task task;
   final VoidCallback? onStatusChanged;
+  final bool showContainerBadge;
 
-  const TaskItemWidget({super.key, required this.task, this.onStatusChanged});
+  const TaskItemWidget({
+    super.key,
+    required this.task,
+    this.onStatusChanged,
+    this.showContainerBadge = true,
+  });
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -49,16 +55,19 @@ class TaskItemWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    task.containerTitle.toUpperCase(),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                if (showContainerBadge)
+                  Expanded(
+                    child: Text(
+                      task.containerTitle.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                  )
+                else
+                  const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,

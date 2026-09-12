@@ -2,22 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
 
 class StartScreen extends StatefulWidget {
-  const StartScreen({super.key});
+  StartScreen({super.key, ApiClient? apiClient})
+    : apiClient = apiClient ?? ApiClient();
+
+  final ApiClient apiClient;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
 class _StartScreenState extends State<StartScreen> {
-  // Der ApiClient enthält die allgemeine Logik für HTTP-Anfragen.
-  final _apiClient = ApiClient();
-
   // Während der Anfrage wird der Info-Button deaktiviert und ein Spinner gezeigt.
   bool _isCheckingApi = false;
 
@@ -30,7 +29,7 @@ class _StartScreenState extends State<StartScreen> {
     try {
       // baseUrl endet in diesem Projekt auf /api.
       // await wartet auf die Serverantwort, ohne die UI zu blockieren.
-      final response = await _apiClient.get(ApiEndpoints.baseUrl);
+      final response = await widget.apiClient.get(ApiEndpoints.baseUrl);
 
       // Der Screen könnte während der Anfrage geschlossen worden sein.
       // Dann darf hier nicht mehr auf seinen BuildContext zugegriffen werden.
@@ -138,11 +137,7 @@ class _StartScreenState extends State<StartScreen> {
                       child: ElevatedButton.icon(
                         // push öffnet den Login über dem Startscreen.
                         // pop im Login führt später wieder hierher zurück.
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        ),
+                        onPressed: () => AppRouter.goToLogin(context),
                         icon: const Icon(Icons.login),
                         label: const Text('Anmelden'),
                       ),
@@ -151,12 +146,7 @@ class _StartScreenState extends State<StartScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        // Die Registrierung ist momentan ein Platzhalter-Screen.
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        ),
+                        onPressed: () => AppRouter.goToRegister(context),
                         icon: const Icon(Icons.person_add_outlined),
                         label: const Text('Registrieren'),
                       ),
