@@ -2,32 +2,36 @@ import 'package:flutter/material.dart';
 
 import '../application/task_controller.dart';
 import '../data/task_model.dart';
-import '../data/task_repository.dart';
 import 'task_item_widget.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 
 class TaskListScreen extends StatefulWidget {
-  TaskListScreen({
-    super.key,
-    TaskRepositoryContract? taskRepository,
-  }) : taskRepository = taskRepository ?? TaskRepository();
+  const TaskListScreen({super.key, this.controller});
 
-  final TaskRepositoryContract taskRepository;
+  /// Optionaler von außen injizierter Controller (z.B. von HomeScreen,
+  /// damit ein Pull-to-Refresh von außen dieselben Daten neu laden kann).
+  /// Wird keiner übergeben, verwaltet der Screen seinen eigenen Controller
+  /// (z.B. bei eigenständiger Nutzung/Tests).
+  final TaskController? controller;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  late final TaskController _controller;
+  late final TaskController _controller = widget.controller ?? TaskController();
 
   @override
   void initState() {
     super.initState();
-    _controller = TaskController(taskRepository: widget.taskRepository);
     _controller.addListener(_handleControllerUpdate);
-    _refreshTasks();
+    // Nur selbst initial laden, wenn wir den Controller selbst besitzen.
+    // Ein von außen injizierter Controller wurde vom Owner (z.B. HomeScreen)
+    // bereits geladen bzw. wird von diesem verwaltet.
+    if (widget.controller == null) {
+      _refreshTasks();
+    }
   }
 
   void _handleControllerUpdate() {
@@ -42,7 +46,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   void dispose() {
     _controller.removeListener(_handleControllerUpdate);
-    _controller.dispose();
+    // Nur aufräumen, wenn dieser Screen den Controller selbst erzeugt hat.
+    // Ein von außen injizierter Controller gehört dem Owner (HomeScreen) und
+    // darf hier nicht disposed werden, sonst crasht der Owner beim nächsten Zugriff.
+    if (widget.controller == null) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 

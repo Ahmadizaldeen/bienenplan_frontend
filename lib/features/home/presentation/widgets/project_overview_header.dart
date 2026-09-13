@@ -6,7 +6,7 @@ import '../../../../core/theme/glass_container.dart';
 class ProjectOverviewHeader extends StatelessWidget {
   const ProjectOverviewHeader({super.key, required this.onRefresh});
 
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {

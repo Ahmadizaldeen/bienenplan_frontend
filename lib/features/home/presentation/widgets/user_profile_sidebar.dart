@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
 
 class UserProfileSidebar extends StatelessWidget {
-  const UserProfileSidebar({super.key, required this.onLogout});
+  const UserProfileSidebar({
+    super.key,
+    required this.onLogout,
+    this.projectController,
+  });
 
   final VoidCallback onLogout;
+
+  /// Optional von außen injizierter Controller, damit z.B. HomeScreen
+  /// per Pull-to-Refresh dieselbe Projektliste neu laden kann.
+  final ProjectController? projectController;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +159,7 @@ class UserProfileSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              const ProjectListWidget(),
+              ProjectListWidget(controller: projectController),
             ],
           ),
         ),
