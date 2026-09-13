@@ -4,7 +4,6 @@ import '../application/task_controller.dart';
 import '../data/task_model.dart';
 import '../data/task_repository.dart';
 import 'task_item_widget.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 
@@ -12,12 +11,9 @@ class TaskListScreen extends StatefulWidget {
   TaskListScreen({
     super.key,
     TaskRepositoryContract? taskRepository,
-    AuthRepositoryContract? authRepository,
-  }) : taskRepository = taskRepository ?? TaskRepository(),
-       authRepository = authRepository ?? AuthRepository();
+  }) : taskRepository = taskRepository ?? TaskRepository();
 
   final TaskRepositoryContract taskRepository;
-  final AuthRepositoryContract authRepository;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
