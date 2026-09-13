@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/routing/app_router.dart';
 import '../presentation/start_screen.dart';
-import '../../tasks/presentation/task_list_screen.dart';
+import '../../home/presentation/home_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key, Future<String?> Function()? tokenReader})
@@ -28,7 +29,13 @@ class AuthGate extends StatelessWidget {
             snapshot.data != null &&
             snapshot.data!.isNotEmpty;
 
-        return hasToken ? TaskListScreen() : StartScreen();
+        return hasToken
+            ? HomeScreen(
+                onLogout: () async {
+                  await AppRouter.logoutAndNavigateToLogin(context);
+                },
+              )
+            : StartScreen();
       },
     );
   }
