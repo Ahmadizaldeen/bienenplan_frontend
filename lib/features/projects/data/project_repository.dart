@@ -9,24 +9,25 @@ abstract class ProjectRepositoryContract {
 class ProjectRepository implements ProjectRepositoryContract {
   ProjectRepository({ApiClient? apiClient})
     : _apiClient = apiClient ?? ApiClient();
-
+  // ignore: unused_field
+  // Bereits vorbereitet für den echten API-Call (siehe TODO in fetchProjects()).
   final ApiClient _apiClient;
-
+ 
   static const List<Project> _placeholderProjects = [
     Project(id: 1, name: 'BienenPlan', isActive: true),
     Project(id: 2, name: 'Marketing'),
     Project(id: 3, name: 'Ressourcen'),
   ];
-
+ 
   @override
   Future<List<Project>> fetchProjects() async {
-    try {
-
-    // TODO: Implement API call to fetch projects.
-
-      throw Exception('Ungültiges Datenformat von API empfangen.');
-    } catch (_) {
-      return _placeholderProjects;
-    }
+    // MOCK: Backend-Endpunkt GET /projects existiert noch nicht (siehe ApiEndpoints).
+    // TODO: Sobald der Endpunkt steht, ersetzen durch:
+    //   final response = await _apiClient.get(ApiEndpoints.projects);
+    //   if (response is List) {
+    //     return response.map((json) => Project.fromJson(json)).toList();
+    //   }
+    //   throw Exception('Ungültiges Datenformat von API empfangen.');
+    return _placeholderProjects;
   }
 }
