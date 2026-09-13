@@ -63,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      AppRouter.replaceWithTaskList(context);
+      AppRouter.replaceWithHome(context);
     } else if (_controller.errorMessage != null) {
       _showErrorSnackBar(_controller.errorMessage!);
     }
