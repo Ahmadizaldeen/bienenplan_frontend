@@ -30,7 +30,6 @@ class BienenPlan extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: const AuthGate(),
       onGenerateRoute: AppRouter.onGenerateRoute,
-      initialRoute: AppRouter.start,
     );
   }
 }
