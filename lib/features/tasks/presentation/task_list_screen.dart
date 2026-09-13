@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/routing/app_router.dart';
 import '../application/task_controller.dart';
 import '../data/task_model.dart';
 import '../data/task_repository.dart';
@@ -44,12 +43,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     _controller.loadTasks();
   }
 
-  Future<void> _handleLogout() async {
-    await widget.authRepository.logout();
-    if (!mounted) return;
-    AppRouter.replaceWithLogin(context);
-  }
-
   @override
   void dispose() {
     _controller.removeListener(_handleControllerUpdate);
@@ -59,46 +52,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.hive_outlined),
-            SizedBox(width: AppSpacing.sm),
-            Text('Aufgabenübersicht'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Aktualisieren',
-            onPressed: _refreshTasks,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Abmelden',
-            onPressed: _handleLogout,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.accent],
-              ),
-            ),
-          ),
-          RefreshIndicator(
-            onRefresh: () async => _refreshTasks(),
-            child: _buildContent(),
-          ),
-        ],
-      ),
-    );
+    return _buildContent();
   }
 
   Widget _buildContent() {
@@ -161,10 +115,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
       );
     }
 
-    return _buildTaskList(_controller.tasks);
+    return _buildTaskOverview(_controller.tasks);
   }
 
-  Widget _buildTaskList(List<Task> tasks) {
+  Widget _buildTaskOverview(List<Task> tasks) {
     final grouped = <int, List<Task>>{};
     final containerTitles = <int, String>{};
 
@@ -175,43 +129,69 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
     final containerIds = grouped.keys.toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: containerIds.length,
-      itemBuilder: (context, index) {
-        final containerId = containerIds[index];
-        final containerTasks = grouped[containerId]!;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: GlassContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  containerTitles[containerId] ?? '',
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Divider(height: AppSpacing.lg),
-                Column(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final containerId in containerIds)
+            Container(
+              width: 320,
+              margin: const EdgeInsets.only(right: AppSpacing.md),
+              child: GlassContainer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final task in containerTasks)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: TaskItemWidget(
-                          task: task,
-                          onStatusChanged: _refreshTasks,
-                          showContainerBadge: false,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            containerTitles[containerId] ?? '',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            '${grouped[containerId]!.length}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF263A35),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.sm),
+                    ...[
+                      for (final task in grouped[containerId]!)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: TaskItemWidget(
+                            task: task,
+                            onStatusChanged: () => _refreshTasks(),
+                            showContainerBadge: false,
+                          ),
+                        ),
+                    ],
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
