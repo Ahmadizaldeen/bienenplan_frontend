@@ -24,7 +24,7 @@ class BienenPlan extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BienenPlan',
-      debugShowCheckedModeBanner: true,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
