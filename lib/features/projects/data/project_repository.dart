@@ -7,11 +7,9 @@ abstract class ProjectRepositoryContract {
 }
 
 class ProjectRepository implements ProjectRepositoryContract {
-  ProjectRepository({ApiClient? apiClient})
-    : _apiClient = apiClient ?? ApiClient();
+  ProjectRepository({ApiClient? apiClient});
   // ignore: unused_field
   // Bereits vorbereitet für den echten API-Call (siehe TODO in fetchProjects()).
-  final ApiClient _apiClient;
  
   static const List<Project> _placeholderProjects = [
     Project(id: 1, name: 'BienenPlan', isActive: true),
