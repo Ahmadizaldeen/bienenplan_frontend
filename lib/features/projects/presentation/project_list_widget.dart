@@ -21,7 +21,11 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
   @override
   void initState() {
     super.initState();
-    _controller.loadProjects();
+    // Nur selbst initial laden, wenn wir den Controller selbst besitzen.
+    // Ein von außen injizierter Controller wurde vom Owner bereits geladen.
+    if (widget.controller == null) {
+      _controller.loadProjects();
+    }
   }
 
   @override
