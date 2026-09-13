@@ -8,7 +8,9 @@ abstract class TaskRepositoryContract {
 }
 
 class TaskRepository implements TaskRepositoryContract {
-  final ApiClient _apiClient = ApiClient();
+  TaskRepository({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  final ApiClient _apiClient;
 
   @override
   Future<List<Task>> fetchTasks() async {
