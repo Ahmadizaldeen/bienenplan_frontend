@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../api/api_client.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/start_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
 import '../../features/tasks/presentation/task_list_screen.dart';
 
 class AppRouter {
   static const String start = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String home = '/home';
   static const String taskList = '/tasks';
+
+  static Future<void> logoutAndNavigateToLogin(BuildContext context) async {
+    final apiClient = ApiClient();
+    await apiClient.deleteToken();
+
+    if (!context.mounted) return;
+
+    await Navigator.of(context)
+        .pushNamedAndRemoveUntil(login, (route) => false);
+  }
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -27,6 +40,13 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => RegisterScreen(),
+        );
+      case home:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => HomeScreen(
+            onLogout: () async => logoutAndNavigateToLogin(context),
+          ),
         );
       case taskList:
         return MaterialPageRoute(
@@ -50,12 +70,20 @@ class AppRouter {
     await Navigator.of(context).pushNamed(register);
   }
 
+  static Future<void> goToHome(BuildContext context) async {
+    await Navigator.of(context).pushNamed(home);
+  }
+
   static Future<void> goToTaskList(BuildContext context) async {
     await Navigator.of(context).pushNamed(taskList);
   }
 
   static Future<void> replaceWithLogin(BuildContext context) async {
     await Navigator.of(context).pushReplacementNamed(login);
+  }
+
+  static Future<void> replaceWithHome(BuildContext context) async {
+    await Navigator.of(context).pushReplacementNamed(home);
   }
 
   static Future<void> replaceWithRegister(BuildContext context) async {
