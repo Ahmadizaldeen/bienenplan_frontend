@@ -14,10 +14,10 @@ werden über eine REST-API aus dem BienenPlan-Backend geladen.
 - Prüfung, ob die Backend-API erreichbar ist, direkt vom Startscreen
 - Laden der Aufgaben über die REST-API
 - Aktualisieren der Aufgabenliste per Button oder Pull-to-Refresh
-- Anzeige von Titel, Beschreibung, Container, Ersteller, Status- Anzeige von Lade-, Fehler- und Leerzuständen
+- Home-Screen mit responsivem Layout (Sidebar + Inhalt, passt sich an Bildschirmbreite an)
+- Projektübersicht in der Sidebar (aktuell mit Platzhalterdaten.)
+- Zentraler Pull-to-Refresh, der Aufgaben und Projekte gemeinsam neu lädt
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
-- Tests für Routing, Controller und Dependency Injection
-
 
 ## Domänenmodell
 
@@ -41,7 +41,9 @@ lib/
 │   └── theme/     Farben, Abstände, Themes und GlassContainer
 ├── features/
 │   ├── auth/      Auth-Gate, Startscreen, Login, Registrierung und Repository
-│   └── tasks/     Modell, Repository, Controller, Liste und Task-Widget
+│   ├── home/      Home-Screen (responsives Layout), Sidebar, Projektübersicht
+│   ├── tasks/     Modell, Repository, Controller, Liste und Task-Widget
+│   └── projects/  Modell, Repository, Controller und Listen-Widget
 └── main.dart      Einstiegspunkt und Auto-Login-Prüfung
 ```
 
@@ -67,10 +69,11 @@ lib/
 
 ### Home-Ansicht (Layout nach dem Login)
 
-- Profil-Widget mit Benutzerinformationen
+- Profil-Widget mit Benutzerinformationen (aktuell mit Platzhalterdaten)
 - Projekt-Spalte zur Projektauswahl
-- Container-Ansicht als zentrales Element
 - Eigenes `ProjectModel`/`ProjectRepository`
+- Echte Backend-Anbindung für Projekte, sobald `GET /projects` existiert.
+- Echte Profildaten statt Platzhalter.
 
 ### Task-Detail-Ansicht
 
@@ -93,6 +96,7 @@ lib/
 
 ### Qualität und Release
 
+- Automatisierte Tests für Controller, Repositories und Routing (aktuell keine vorhanden — Dependency-Injection-Struktur ist dafür bereits vorbereitet)
 - Responsive Darstellung für Web, Desktop und mobile Geräte
 - Konfigurierbare Backend-URL für Entwicklungs- und Produktionsumgebungen
 
@@ -119,7 +123,7 @@ Für einen lokalen Qualitätscheck:
 
 ```bash
 flutter analyze
-flutter test
+flutter test   # aktuell noch keine Tests vorhanden, siehe "Noch offen"
 ```
 
 Die Backend-Basis-URL ist aktuell in

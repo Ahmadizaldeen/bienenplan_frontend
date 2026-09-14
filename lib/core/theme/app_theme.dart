@@ -13,6 +13,8 @@ class AppColors {
   static const glassBorderLight = Color(0x99FFFFFF);
   static const glassTintDark = Color(0x33000000);
   static const glassBorderDark = Color(0x668FAFA5);
+
+  static const buttonText = Color.fromARGB(102, 5, 236, 86);
 }
 
 class AppSpacing {
@@ -102,11 +104,16 @@ class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.backgroundDark,
+        foregroundColor: AppColors.buttonText,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.md, // Added explicit horizontal padding
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        elevation: 2, // Controls the shadow depth
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(

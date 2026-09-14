@@ -11,7 +11,9 @@ abstract class AuthRepositoryContract {
 }
 
 class AuthRepository implements AuthRepositoryContract {
-  final ApiClient _apiClient = ApiClient();
+  AuthRepository({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  final ApiClient _apiClient;
 
   /// Versucht, eine detaillierte Error-Message aus dem Backend-Response zu extrahieren.
   /// Backend kann JSON zurückgeben wie: {"message": "...", "error": "...", "errors": {...}}
