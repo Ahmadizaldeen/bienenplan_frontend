@@ -4,6 +4,7 @@ import 'project_model.dart';
 
 abstract class ProjectRepositoryContract {
   Future<List<Project>> fetchProjects();
+  Future<void> createProject(String name);
 }
 
 class ProjectRepository implements ProjectRepositoryContract {
@@ -27,5 +28,10 @@ class ProjectRepository implements ProjectRepositoryContract {
     } else {
       throw Exception('Ungültiges Datenformat von API empfangen.');
     }
+  }
+
+  @override
+  Future<void> createProject(String name) async {
+    await _apiClient.post(ApiEndpoints.projects, {'name': name});
   }
 }

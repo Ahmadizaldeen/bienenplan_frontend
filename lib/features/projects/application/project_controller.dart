@@ -32,4 +32,28 @@ class ProjectController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> createProject(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      _errorMessage = 'Projektname darf nicht leer sein.';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _projectRepository.createProject(trimmed);
+      await loadProjects();
+      return true;
+    } catch (error) {
+      _errorMessage = error.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

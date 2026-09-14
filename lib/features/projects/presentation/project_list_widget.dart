@@ -36,17 +36,76 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
     super.dispose();
   }
 
+  Future<void> _showCreateProjectDialog() async {
+    final textController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Neues Projekt'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: textController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Projektname',
+                hintText: 'z.B. Marketing Q3',
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Bitte geben Sie einen Projektnamen ein.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(dialogContext).pop(true);
+                }
+              },
+              child: const Text('Erstellen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (created == true && mounted) {
+      final success = await _controller.createProject(textController.text);
+      if (!mounted) return;
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Projekt erfolgreich erstellt!')),
+        );
+      } else if (_controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_controller.errorMessage!),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+    textController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        if (_controller.isLoading) {
+        if (_controller.isLoading && _controller.projects.isEmpty) {
           return const Center(child: CircularProgressIndicator());
-        }
-
-        if (_controller.errorMessage != null) {
-          return GlassContainer(child: Text(_controller.errorMessage!));
         }
 
         return Container(
@@ -65,8 +124,28 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_controller.errorMessage != null) ...[
+                GlassContainer(child: Text(_controller.errorMessage!)),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              if (_controller.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
               for (final project in _controller.projects)
                 _ProjectTile(project: project),
+              const SizedBox(height: AppSpacing.xs),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _controller.isLoading
+                      ? null
+                      : _showCreateProjectDialog,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Projekt hinzufügen'),
+                ),
+              ),
             ],
           ),
         );
