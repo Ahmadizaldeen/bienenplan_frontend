@@ -4,6 +4,7 @@ class ApiEndpoints {
   static const String login = "$baseUrl/login";
   static const String register = "$baseUrl/register";
   static const String tasks = "$baseUrl/tasks";
+  static const String projects = "$baseUrl/projects";
 
   static String taskDetail(int id) => "$baseUrl/tasks/$id";
   static String updateTaskStatus(int id) => "$baseUrl/tasks/$id/status";
