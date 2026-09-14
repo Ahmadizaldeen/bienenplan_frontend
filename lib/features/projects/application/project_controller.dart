@@ -16,6 +16,20 @@ class ProjectController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   List<Project> get projects => _projects;
+  Project? get selectedProject {
+    try {
+      return _projects.firstWhere((p) => p.isActive);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void selectProject(int projectId) {
+    _projects = _projects.map((project) {
+      return project.copyWith(isActive: project.id == projectId);
+    }).toList();
+    notifyListeners();
+  }
 
   Future<void> loadProjects() async {
     _isLoading = true;

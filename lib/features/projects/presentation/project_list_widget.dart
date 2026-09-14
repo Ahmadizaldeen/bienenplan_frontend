@@ -134,7 +134,10 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
                   child: LinearProgressIndicator(minHeight: 2),
                 ),
               for (final project in _controller.projects)
-                _ProjectTile(project: project),
+                _ProjectTile(
+                  project: project,
+                  onSelect: () => _controller.selectProject(project.id),
+                ),
               const SizedBox(height: AppSpacing.xs),
               SizedBox(
                 width: double.infinity,
@@ -155,58 +158,66 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.project});
+  const _ProjectTile({required this.project, required this.onSelect});
 
   final Project project;
+  final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
     final active = project.isActive;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: active
-            ? AppColors.accent.withValues(alpha: 0.18)
-            : Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: active
-              ? AppColors.accent
-              : Colors.white.withValues(alpha: 0.25),
-          width: active ? 1.5 : 1,
+    return InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            active ? Icons.check_circle : Icons.circle_outlined,
-            color: active ? AppColors.accent : const Color(0xFF5B6A66),
-            size: 18,
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.accent.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: active
+                ? AppColors.accent
+                : Colors.white.withValues(alpha: 0.25),
+            width: active ? 1.5 : 1,
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              project.name,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: const Color(0xFF263A35),
+        ),
+        child: Row(
+          children: [
+            Radio<bool>(
+              value: true,
+              groupValue: active ? true : null,
+              onChanged: (_) => onSelect(),
+              activeColor: AppColors.accent,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                project.name,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: const Color(0xFF263A35),
+                ),
               ),
             ),
-          ),
-          if (active)
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 14,
-              color: AppColors.accent,
-            ),
-        ],
+            if (active)
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.accent,
+              ),
+          ],
+        ),
       ),
     );
   }

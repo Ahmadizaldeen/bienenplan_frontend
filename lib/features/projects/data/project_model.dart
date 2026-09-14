@@ -5,6 +5,14 @@ class Project {
 
   const Project({required this.id, required this.name, this.isActive = false});
 
+  Project copyWith({int? id, String? name, bool? isActive}) {
+    return Project(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
   factory Project.fromJson(Map<String, dynamic> json) {
     return Project(
       id: json['id'] is int
