@@ -65,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
               final content = _HomeContent(
                 taskController: _taskController,
+                projectController: _projectController,
                 onRefresh: _refreshAll,
               );
 
@@ -108,9 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeContent extends StatelessWidget {
-  const _HomeContent({required this.taskController, required this.onRefresh});
+  const _HomeContent({
+    required this.taskController,
+    required this.projectController,
+    required this.onRefresh,
+  });
 
   final TaskController taskController;
+  final ProjectController projectController;
   final Future<void> Function() onRefresh;
 
   @override
@@ -125,7 +131,15 @@ class _HomeContent extends StatelessWidget {
           children: [
             ProjectOverviewHeader(onRefresh: onRefresh),
             const SizedBox(height: AppSpacing.md),
-            TaskListScreen(controller: taskController),
+            AnimatedBuilder(
+              animation: projectController,
+              builder: (context, _) {
+                return TaskListScreen(
+                  controller: taskController,
+                  projectId: projectController.selectedProject?.id,
+                );
+              },
+            ),
           ],
         ),
       ),

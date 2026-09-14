@@ -1,6 +1,7 @@
 class Task {
   final int id;
   final int containerId;
+  final int? projectId;
   final int createdBy;
   final String title;
   final String description;
@@ -17,6 +18,7 @@ class Task {
   Task({
     required this.id,
     required this.containerId,
+    this.projectId,
     required this.createdBy,
     required this.title,
     required this.description,
@@ -37,6 +39,11 @@ class Task {
       containerId: json['container_id'] is int
           ? json['container_id']
           : int.parse(json['container_id'].toString()),
+      projectId: json['project_id'] != null
+          ? (json['project_id'] is int
+                ? json['project_id']
+                : int.tryParse(json['project_id'].toString()))
+          : null,
       createdBy: json['created_by'] is int
           ? json['created_by']
           : int.parse(json['created_by'].toString()),
@@ -50,8 +57,8 @@ class Task {
       deletedAt: json['deleted_at'],
       deletedBy: json['deleted_by'] != null
           ? (json['deleted_by'] is int
-              ? json['deleted_by']
-              : int.tryParse(json['deleted_by'].toString()))
+                ? json['deleted_by']
+                : int.tryParse(json['deleted_by'].toString()))
           : null,
       containerTitle: json['container_title'] ?? '',
       creatorName: json['creator_name'] ?? '',
@@ -62,6 +69,7 @@ class Task {
     return {
       'id': id,
       'container_id': containerId,
+      'project_id': projectId,
       'created_by': createdBy,
       'title': title,
       'description': description,
@@ -85,15 +93,15 @@ class Task {
 
   // Safe formatted deadline String (prevents null reference bugs)
   String get formattedDeadline {
-  final date = deadlineDateTime;
-  if (date == null) return 'Keine Frist';
-  
-  final day = date.day.toString().padLeft(2, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final year = date.year;
-  final hour = date.hour.toString().padLeft(2, '0');
-  final minute = date.minute.toString().padLeft(2, '0');
+    final date = deadlineDateTime;
+    if (date == null) return 'Keine Frist';
 
-  return '$day.$month.$year $hour:$minute';
-}
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year;
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+
+    return '$day.$month.$year $hour:$minute';
+  }
 }

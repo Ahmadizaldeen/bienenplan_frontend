@@ -7,13 +7,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({super.key, this.controller});
+  const TaskListScreen({super.key, this.controller, this.projectId});
 
   /// Optionaler von außen injizierter Controller (z.B. von HomeScreen,
   /// damit ein Pull-to-Refresh von außen dieselben Daten neu laden kann).
   /// Wird keiner übergeben, verwaltet der Screen seinen eigenen Controller
   /// (z.B. bei eigenständiger Nutzung/Tests).
   final TaskController? controller;
+  final int? projectId;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
@@ -98,7 +99,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
       );
     }
 
-    if (_controller.tasks.isEmpty) {
+    final visibleTasks = widget.projectId == null
+        ? _controller.tasks
+        : _controller.tasks
+              .where((task) => task.projectId == widget.projectId)
+              .toList();
+
+    if (visibleTasks.isEmpty) {
       return Center(
         child: GlassContainer(
           child: Column(
@@ -120,7 +127,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       );
     }
 
-    return _buildTaskOverview(_controller.tasks);
+    return _buildTaskOverview(visibleTasks);
   }
 
   Widget _buildTaskOverview(List<Task> tasks) {
