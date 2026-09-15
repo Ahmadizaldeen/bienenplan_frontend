@@ -14,6 +14,8 @@ class Task {
   final int? deletedBy;
   final String containerTitle;
   final String creatorName;
+  final List<int> groupIds;
+  final List<String> groupNames;
 
   Task({
     required this.id,
@@ -31,14 +33,38 @@ class Task {
     this.deletedBy,
     required this.containerTitle,
     required this.creatorName,
+    this.groupIds = const [],
+    this.groupNames = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
+    // Backend liefert bei manchen Endpunkten "group_ids"/"group_names" als
+    // kommaseparierten String (SQL GROUP_CONCAT).
+    List<int> parseGroupIds(dynamic value) {
+      if (value == null) return const [];
+      final raw = value.toString();
+      if (raw.isEmpty) return const [];
+      return raw
+          .split(',')
+          .map((e) => int.tryParse(e.trim()))
+          .whereType<int>()
+          .toList();
+    }
+
+    List<String> parseGroupNames(dynamic value) {
+      if (value == null) return const [];
+      final raw = value.toString();
+      if (raw.isEmpty) return const [];
+      return raw.split(',').map((e) => e.trim()).toList();
+    }
+
     return Task(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id'].toString()) ?? 0,
       containerId: json['container_id'] is int
           ? json['container_id']
-          : int.parse(json['container_id'].toString()),
+          : int.tryParse(json['container_id'].toString()) ?? 0,
       projectId: json['project_id'] != null
           ? (json['project_id'] is int
                 ? json['project_id']
@@ -46,7 +72,7 @@ class Task {
           : null,
       createdBy: json['created_by'] is int
           ? json['created_by']
-          : int.parse(json['created_by'].toString()),
+          : int.tryParse(json['created_by'].toString()) ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       status: json['status'] ?? 'pending',
@@ -62,6 +88,8 @@ class Task {
           : null,
       containerTitle: json['container_title'] ?? '',
       creatorName: json['creator_name'] ?? '',
+      groupIds: parseGroupIds(json['group_ids']),
+      groupNames: parseGroupNames(json['group_names']),
     );
   }
 
@@ -103,5 +131,11 @@ class Task {
     final minute = date.minute.toString().padLeft(2, '0');
 
     return '$day.$month.$year $hour:$minute';
+  }
+
+  /// Dateiname des Anhangs für die Anzeige (ohne Pfad).
+  String? get attachmentFileName {
+    if (attachment == null || attachment!.isEmpty) return null;
+    return attachment!.split('/').last;
   }
 }
