@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
 import '../../tasks/application/task_controller.dart';
-import '../../tasks/presentation/task_list_screen.dart';
+import '../../tasks/presentation/task_container_screen.dart';
 import 'widgets/project_overview_header.dart';
 import 'widgets/user_profile_sidebar.dart';
 
