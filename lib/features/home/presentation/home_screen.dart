@@ -8,9 +8,19 @@ import 'widgets/project_overview_header.dart';
 import 'widgets/user_profile_sidebar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onLogout});
+  const HomeScreen({
+    super.key,
+    required this.onLogout,
+    this.taskController,
+    this.projectController,
+  });
 
   final VoidCallback onLogout;
+
+  /// Optional von außen injizierte Controller (z.B. für Tests). Wird keiner
+  /// übergeben, verwaltet HomeScreen seine eigenen Controller.
+  final TaskController? taskController;
+  final ProjectController? projectController;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,8 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
   // der Refresh-Button in ProjectOverviewHeader dieselben Daten neu laden
   // können, die TaskListScreen und ProjectListWidget anzeigen.
-  final TaskController _taskController = TaskController();
-  final ProjectController _projectController = ProjectController();
+  late final TaskController _taskController =
+      widget.taskController ?? TaskController();
+  late final ProjectController _projectController =
+      widget.projectController ?? ProjectController();
 
   @override
   void initState() {
@@ -31,8 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _taskController.dispose();
-    _projectController.dispose();
+    // Nur aufräumen, wenn dieser Screen die Controller selbst erzeugt hat.
+    // Von außen injizierte Controller gehören dem Owner und dürfen hier
+    // nicht disposed werden.
+    if (widget.taskController == null) _taskController.dispose();
+    if (widget.projectController == null) _projectController.dispose();
     super.dispose();
   }
 
