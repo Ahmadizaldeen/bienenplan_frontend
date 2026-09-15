@@ -4,7 +4,7 @@ import '../api/api_client.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
-import '../../features/tasks/presentation/task_list_screen.dart';
+import '../../features/tasks/presentation/task_container_screen.dart';
 
 class AppRouter {
   // Hinweis: Es gibt bewusst KEINE Route für '/' hier. Der App-Einstieg
