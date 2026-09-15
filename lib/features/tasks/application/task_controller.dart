@@ -221,7 +221,7 @@ class TaskController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final newContainer = await _containerRepository.createContainer(
+      await _containerRepository.createContainer(
         trimmedTitle,
         projectId: projectId,
       );
