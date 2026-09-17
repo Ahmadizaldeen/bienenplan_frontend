@@ -1,33 +1,35 @@
 # BienenPlan Flutter Frontend
 
 BienenPlan ist eine plattformübergreifende Flutter-Anwendung zur gemeinsamen
-Planung und Verwaltung von Aufgaben. Aufgaben gehören zu einem Container und
-werden über eine REST-API aus dem BienenPlan-Backend geladen.
+Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
+über eine REST-API aus dem BienenPlan-Backend geladen und verwaltet.
 
 ## Aktueller Stand
 
 - Startscreen mit Navigation zu Anmeldung und Registrierung
-- Login mit E-Mail und Passwort
-- JWT-Sitzung mit sicherer Speicherung über `flutter_secure_storage`
-- Automatischer Login beim App-Start, wenn ein gültiges Token vorhanden ist
-- Abmelden und Löschen der lokalen Sitzung
-- Prüfung, ob die Backend-API erreichbar ist, direkt vom Startscreen
-- Laden der Aufgaben über die REST-API
-- Aktualisieren der Aufgabenliste per Button oder Pull-to-Refresh
-- Home-Screen mit responsivem Layout (Sidebar + Inhalt, passt sich an Bildschirmbreite an)
-- Projektübersicht in der Sidebar (aktuell mit Platzhalterdaten.)
-- Zentraler Pull-to-Refresh, der Aufgaben und Projekte gemeinsam neu lädt
+- Login mit E-Mail und Passwort sowie JWT-Sitzung in `flutter_secure_storage`
+- Automatischer Login beim App-Start, Abmelden und Löschen der lokalen Sitzung
+- Prüfung der Backend-Erreichbarkeit direkt vom Startscreen
+- Home-Ansicht mit Sidebar, Projektübersicht und zentralem Pull-to-Refresh
+- Projekte über die REST-API laden, erstellen und auswählen
+- Zuletzt ausgewähltes Projekt lokal speichern und beim Laden wiederherstellen
+- Aufgaben des ausgewählten Projekts nach Containern gruppiert anzeigen
+- Container für ein Projekt erstellen und Aufgaben zu einem Container hinzufügen
+- Aufgaben mit Titel, Beschreibung, Status und optionaler Frist erstellen und bearbeiten
+- Gruppen einer Aufgabe laden sowie zuweisen oder entfernen
+- Datei-Anhänge für Aufgaben auswählen, hochladen und anzeigen
+- API-Client mit GET, POST, PUT, DELETE und Multipart-Upload
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
 
 ## Domänenmodell
 
 ```text
-Benutzer (Projekt owner, personal Groupe)
-  └── Projekt  
-        └── Gruppen
-              └── Containers
-                    └── Aufgaben (an Gruppen zugewissen )
-                        └── Teil-Aufgaben 
+Benutzer
+  └── Projekt
+        └── Container
+              └── Aufgaben
+                    ├── Gruppen-Zuweisungen
+                    └── Anhang
 ```
 
 
@@ -41,9 +43,10 @@ lib/
 │   └── theme/     Farben, Abstände, Themes und GlassContainer
 ├── features/
 │   ├── auth/      Auth-Gate, Startscreen, Login, Registrierung und Repository
-│   ├── home/      Home-Screen (responsives Layout), Sidebar, Projektübersicht
-│   ├── tasks/     Modell, Repository, Controller, Liste und Task-Widget
-│   └── projects/  Modell, Repository, Controller und Listen-Widget
+│   ├── home/      Home-Screen, Sidebar und Projektübersicht
+│   ├── projects/  Projektmodell, Repository, lokaler Store, Controller und Liste
+│   └── tasks/     Aufgaben-, Container- und Gruppenmodelle, Repositories,
+│                  Controller, Container-Ansicht und Dialoge
 └── main.dart      Einstiegspunkt und Auto-Login-Prüfung
 ```
 
@@ -51,53 +54,17 @@ lib/
 
 - Bei einer nicht autorisierten Antwort wird das Token gelöscht.
 - Passwörter werden nicht lokal gespeichert.
+- Die zuletzt ausgewählte Projekt-ID wird lokal gespeichert; sie ist reiner
+  Client-Zustand und wird nicht mit dem Backend synchronisiert.
 
 ## Noch offen
 
-### Aufgabenverwaltung
-
-- Statusänderung direkt in der Task-Karte ermöglichen
-- Statusänderung über das vorhandene API-Repository ausführen
-- Erfolgs- und Fehlermeldungen in der Oberfläche anzeigen
-- Ladezustände während einer Statusänderung absichern
-
-### Container-Ansicht
-
-- Aufgaben nach `containerId` gruppieren
-- Pro Container eine eigene Bereich
-- Container-Kopf mit Titel und Aufgabenanzahl anzeigen
-
-### Home-Ansicht (Layout nach dem Login)
-
-- Profil-Widget mit Benutzerinformationen (aktuell mit Platzhalterdaten)
-- Projekt-Spalte zur Projektauswahl
-- Eigenes `ProjectModel`/`ProjectRepository`
-- Echte Backend-Anbindung für Projekte, sobald `GET /projects` existiert.
-- Echte Profildaten statt Platzhalter.
-
-### Task-Detail-Ansicht
-
-- Neues, interaktives Widget für alle Task-Details (statt Kurzansicht)
-- Subtasks mit einfachem Status (offen/erledigt)
-- Kommentare zu einer Aufgabe anzeigen und hinzufügen
-- Anhänge (Dateien oder Bilder) hochladen und anzeigen
-- Gruppen zu einer Aufgabe erstellen und anzeigen
-
-### Aufgaben erstellen und bearbeiten
-
-- Formular zum Erstellen einer Aufgabe, vo Container-Widget zugriffbar
-- Bearbeiten und Löschen mit Bestätigungsdialog
-
-### Projekt- und Gruppenverwaltung
-
-- Projekte und Container laden und auswählen
-- Gruppenberechtigungen sichtbar machen
-- Rollen und Zugriffsrechte in der Oberfläche berücksichtigen
-
-### Qualität und Release
-
-- Automatisierte Tests für Controller, Repositories und Routing (aktuell keine vorhanden — Dependency-Injection-Struktur ist dafür bereits vorbereitet)
-- Responsive Darstellung für Web, Desktop und mobile Geräte
+- Echte Profildaten statt der derzeitigen Platzhalterdaten anzeigen
+- Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
+- Teilaufgaben und Kommentare zu Aufgaben unterstützen
+- Aufgaben und Container bearbeiten oder löschen
+- Gruppenberechtigungen, Rollen und Zugriffsrechte in der Oberfläche abbilden
+- Responsive Darstellung für Web, Desktop und mobile Geräte weiter verfeinern
 - Konfigurierbare Backend-URL für Entwicklungs- und Produktionsumgebungen
 
 ## Voraussetzungen
@@ -109,8 +76,8 @@ lib/
 Flutter installieren: <https://docs.flutter.dev/install/manual>
 
 Die aktuell verwendeten Versionen und Abhängigkeiten stehen in
-`pubspec.yaml`. Das Projekt verwendet unter anderem `http` und
-`flutter_secure_storage`.
+`pubspec.yaml`. Das Projekt verwendet unter anderem `http`,
+`flutter_secure_storage` und `file_picker`.
 
 ## Installation und Start
 
@@ -123,7 +90,7 @@ Für einen lokalen Qualitätscheck:
 
 ```bash
 flutter analyze
-flutter test   # aktuell noch keine Tests vorhanden, siehe "Noch offen"
+flutter test
 ```
 
 Die Backend-Basis-URL ist aktuell in
@@ -132,6 +99,7 @@ Die Backend-Basis-URL ist aktuell in
 ```text
 http://localhost/BienenPlan/backend/public/api
 ```
+
 ## Backend
 
 Das zugehörige REST-Backend basiert auf Slim Framework, PHP und MySQL:
