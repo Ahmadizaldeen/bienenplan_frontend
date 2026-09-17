@@ -79,8 +79,8 @@ class TaskRepository implements TaskRepositoryContract {
       'title': title,
       'description': description,
       'status': status,
-      if (deadline != null) 'deadline': deadline,
-      if (attachment != null) 'attachment': attachment,
+      'deadline': ?deadline,
+      'attachment': ?attachment,
     });
   }
 

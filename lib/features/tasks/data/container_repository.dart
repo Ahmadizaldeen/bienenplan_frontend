@@ -34,7 +34,7 @@ class ContainerRepository implements ContainerRepositoryContract {
   Future<Container> createContainer(String title, {int? projectId}) async {
     final response = await _apiClient.post(ApiEndpoints.containers, {
       'title': title,
-      if (projectId != null) 'project_id': projectId,
+      'project_id': ?projectId,
     });
 
     if (response is Map<String, dynamic>) {
