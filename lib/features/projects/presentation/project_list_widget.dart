@@ -136,6 +136,7 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
               for (final project in _controller.projects)
                 _ProjectTile(
                   project: project,
+                  active: project.id == _controller.selectedProject?.id,
                   onSelect: () => _controller.selectProject(project.id),
                 ),
               const SizedBox(height: AppSpacing.xs),
@@ -158,15 +159,18 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.project, required this.onSelect});
+  const _ProjectTile({
+    required this.project,
+    required this.active,
+    required this.onSelect,
+  });
 
   final Project project;
+  final bool active;
   final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final active = project.isActive;
-
     return InkWell(
       onTap: onSelect,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -191,13 +195,23 @@ class _ProjectTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Radio<bool>(
-              value: true,
-              groupValue: active ? true : null,
-              onChanged: (_) => onSelect(),
-              activeColor: AppColors.accent,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: active
+                      ? AppColors.accent
+                      : Colors.white.withValues(alpha: 0.5),
+                  width: 2,
+                ),
+                color: active ? AppColors.accent : Colors.transparent,
+              ),
+              child: active
+                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  : null,
             ),
             const SizedBox(width: AppSpacing.xs),
             Expanded(
