@@ -3,14 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
 import '../../tasks/application/task_controller.dart';
-import '../../tasks/presentation/task_list_screen.dart';
+import '../../tasks/presentation/task_container_screen.dart';
 import 'widgets/project_overview_header.dart';
 import 'widgets/user_profile_sidebar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onLogout});
+  const HomeScreen({
+    super.key,
+    required this.onLogout,
+    this.taskController,
+    this.projectController,
+  });
 
   final VoidCallback onLogout;
+
+  /// Optional von außen injizierte Controller (z.B. für Tests). Wird keiner
+  /// übergeben, verwaltet HomeScreen seine eigenen Controller.
+  final TaskController? taskController;
+  final ProjectController? projectController;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,8 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
   // der Refresh-Button in ProjectOverviewHeader dieselben Daten neu laden
   // können, die TaskListScreen und ProjectListWidget anzeigen.
-  final TaskController _taskController = TaskController();
-  final ProjectController _projectController = ProjectController();
+  late final TaskController _taskController =
+      widget.taskController ?? TaskController();
+  late final ProjectController _projectController =
+      widget.projectController ?? ProjectController();
 
   @override
   void initState() {
@@ -31,8 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _taskController.dispose();
-    _projectController.dispose();
+    // Nur aufräumen, wenn dieser Screen die Controller selbst erzeugt hat.
+    // Von außen injizierte Controller gehören dem Owner und dürfen hier
+    // nicht disposed werden.
+    if (widget.taskController == null) _taskController.dispose();
+    if (widget.projectController == null) _projectController.dispose();
     super.dispose();
   }
 
@@ -65,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
               final content = _HomeContent(
                 taskController: _taskController,
+                projectController: _projectController,
                 onRefresh: _refreshAll,
               );
 
@@ -108,9 +124,14 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeContent extends StatelessWidget {
-  const _HomeContent({required this.taskController, required this.onRefresh});
+  const _HomeContent({
+    required this.taskController,
+    required this.projectController,
+    required this.onRefresh,
+  });
 
   final TaskController taskController;
+  final ProjectController projectController;
   final Future<void> Function() onRefresh;
 
   @override
@@ -125,7 +146,15 @@ class _HomeContent extends StatelessWidget {
           children: [
             ProjectOverviewHeader(onRefresh: onRefresh),
             const SizedBox(height: AppSpacing.md),
-            TaskListScreen(controller: taskController),
+            AnimatedBuilder(
+              animation: projectController,
+              builder: (context, _) {
+                return TaskListScreen(
+                  controller: taskController,
+                  projectId: projectController.selectedProject?.id,
+                );
+              },
+            ),
           ],
         ),
       ),

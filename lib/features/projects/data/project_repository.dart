@@ -4,29 +4,34 @@ import 'project_model.dart';
 
 abstract class ProjectRepositoryContract {
   Future<List<Project>> fetchProjects();
+  Future<void> createProject(String name);
 }
 
 class ProjectRepository implements ProjectRepositoryContract {
-  ProjectRepository({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
-  // ignore: unused_field
-  // Bereits vorbereitet für den echten API-Call (siehe TODO in fetchProjects()).
+  ProjectRepository({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
+
   final ApiClient _apiClient;
 
-  static const List<Project> _placeholderProjects = [
-    Project(id: 1, name: 'BienenPlan', isActive: true),
-    Project(id: 2, name: 'Marketing'),
-    Project(id: 3, name: 'Ressourcen'),
-  ];
- 
   @override
   Future<List<Project>> fetchProjects() async {
-    // MOCK: Backend-Endpunkt GET /projects existiert noch nicht (siehe ApiEndpoints).
-    // TODO: Sobald der Endpunkt steht, ersetzen durch:
-    //   final response = await _apiClient.get(ApiEndpoints.projects);
-    //   if (response is List) {
-    //     return response.map((json) => Project.fromJson(json)).toList();
-    //   }
-    //   throw Exception('Ungültiges Datenformat von API empfangen.');
-    return _placeholderProjects;
+    final response = await _apiClient.get(ApiEndpoints.projects);
+
+    if (response is List) {
+      return response
+          .map((json) => Project.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else if (response is Map<String, dynamic> && response['data'] is List) {
+      return (response['data'] as List)
+          .map((json) => Project.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('Ungültiges Datenformat von API empfangen.');
+    }
+  }
+
+  @override
+  Future<void> createProject(String name) async {
+    await _apiClient.post(ApiEndpoints.projects, {'name': name});
   }
 }
