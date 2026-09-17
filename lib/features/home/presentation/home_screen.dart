@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
 import '../../tasks/application/task_controller.dart';
 import '../../tasks/presentation/task_container_screen.dart';
+import '../../user/application/user_controller.dart';
 import 'widgets/project_overview_header.dart';
 import 'widgets/user_profile_sidebar.dart';
 
@@ -13,6 +14,7 @@ class HomeScreen extends StatefulWidget {
     required this.onLogout,
     this.taskController,
     this.projectController,
+    this.userController,
   });
 
   final VoidCallback onLogout;
@@ -21,6 +23,7 @@ class HomeScreen extends StatefulWidget {
   /// übergeben, verwaltet HomeScreen seine eigenen Controller.
   final TaskController? taskController;
   final ProjectController? projectController;
+  final UserController? userController;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -34,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
       widget.taskController ?? TaskController();
   late final ProjectController _projectController =
       widget.projectController ?? ProjectController();
+  late final UserController _userController =
+      widget.userController ?? UserController();
 
   @override
   void initState() {
@@ -48,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // nicht disposed werden.
     if (widget.taskController == null) _taskController.dispose();
     if (widget.projectController == null) _projectController.dispose();
+    if (widget.userController == null) _userController.dispose();
     super.dispose();
   }
 
@@ -55,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Future.wait([
       _taskController.loadTasks(),
       _projectController.loadProjects(),
+      _userController.loadCurrentUser(),
     ]);
   }
 
@@ -77,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final sidebar = UserProfileSidebar(
                 onLogout: widget.onLogout,
                 projectController: _projectController,
+                userController: _userController,
               );
               final content = _HomeContent(
                 taskController: _taskController,
