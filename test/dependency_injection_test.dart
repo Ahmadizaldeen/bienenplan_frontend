@@ -58,14 +58,14 @@ class _FakeTaskRepo implements TaskRepositoryContract {
   ) async => filename;
 
   @override
-  Future<void> createTask({
+  Future<int> createTask({
     required int containerId,
     required String title,
     String description = '',
     String status = 'pending',
     String? deadline,
     String? attachment,
-  }) async {}
+  }) async => 1;
 }
 
 class _FakeContainerRepo implements ContainerRepositoryContract {

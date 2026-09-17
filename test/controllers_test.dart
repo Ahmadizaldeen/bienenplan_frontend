@@ -104,14 +104,14 @@ class FakeTaskRepository implements TaskRepositoryContract {
   ) async => filename;
 
   @override
-  Future<void> createTask({
+  Future<int> createTask({
     required int containerId,
     required String title,
     String description = '',
     String status = 'pending',
     String? deadline,
     String? attachment,
-  }) async {}
+  }) async => 1;
 }
 
 /// Simuliert das Backend: `createTask` speichert die Aufgabe, danach liefert
@@ -160,7 +160,7 @@ class _CreateAwareTaskRepository implements TaskRepositoryContract {
   ) async => filename;
 
   @override
-  Future<void> createTask({
+  Future<int> createTask({
     required int containerId,
     required String title,
     String description = '',
@@ -185,6 +185,7 @@ class _CreateAwareTaskRepository implements TaskRepositoryContract {
         creatorName: 'Tester',
       ),
     );
+    return _tasks.last.id;
   }
 }
 
