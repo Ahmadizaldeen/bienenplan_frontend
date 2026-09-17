@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/task_controller.dart';
+import '../data/group_model.dart';
 import '../../../core/theme/app_theme.dart';
 
 /// Zeigt die Task-Einzelsicht als Dialog zum Erstellen einer neuen Aufgabe
@@ -40,6 +41,9 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
   String _status = 'pending';
   DateTime? _deadline;
   bool _isSubmitting = false;
+  bool _isLoadingGroups = true;
+  List<Group> _allGroups = const [];
+  final Set<int> _selectedGroupIds = {};
 
   static const _statusOptions = {
     'pending': 'Offen',
@@ -53,6 +57,21 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     _descriptionController.dispose();
     _attachmentController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    final groups = await widget.controller.fetchAllGroups();
+    if (!mounted) return;
+    setState(() {
+      _allGroups = groups;
+      _isLoadingGroups = false;
+    });
   }
 
   Future<void> _pickDeadline() async {
@@ -94,6 +113,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
       status: _status,
       deadline: _deadline?.toIso8601String(),
       attachment: _attachmentController.text.trim(),
+      groupIds: _selectedGroupIds,
     );
 
     if (!mounted) return;
@@ -158,6 +178,39 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                     if (value != null) setState(() => _status = value);
                   },
                 ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Gruppen-Zuweisung',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                if (_isLoadingGroups)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_allGroups.isEmpty)
+                  const Text('Keine Gruppen vorhanden.')
+                else
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: _allGroups.map((group) {
+                      return FilterChip(
+                        label: Text(group.name),
+                        selected: _selectedGroupIds.contains(group.id),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedGroupIds.add(group.id);
+                            } else {
+                              _selectedGroupIds.remove(group.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [

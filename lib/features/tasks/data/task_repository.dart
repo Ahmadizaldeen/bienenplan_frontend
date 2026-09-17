@@ -17,7 +17,7 @@ abstract class TaskRepositoryContract {
     String? attachment,
   });
   Future<String> uploadAttachment(int taskId, Uint8List bytes, String filename);
-  Future<void> createTask({
+  Future<int> createTask({
     required int containerId,
     required String title,
     String description,
@@ -104,7 +104,7 @@ class TaskRepository implements TaskRepositoryContract {
   }
 
   @override
-  Future<void> createTask({
+  Future<int> createTask({
     required int containerId,
     required String title,
     String description = '',
@@ -115,7 +115,7 @@ class TaskRepository implements TaskRepositoryContract {
     // created_by wird vom Backend anhand des JWT ermittelt.
     // Die Antwort wird bewusst nicht geparst, da ihr Format vom
     // GET /tasks-Format abweichen kann; die Liste wird danach neu geladen.
-    await _apiClient.post(ApiEndpoints.tasks, {
+    final response = await _apiClient.post(ApiEndpoints.tasks, {
       'container_id': containerId,
       'title': title,
       'description': description,
@@ -123,5 +123,13 @@ class TaskRepository implements TaskRepositoryContract {
       if (deadline != null && deadline.isNotEmpty) 'deadline': deadline,
       if (attachment != null && attachment.isNotEmpty) 'attachment': attachment,
     });
+
+    if (response is Map<String, dynamic> && response['id'] != null) {
+      return response['id'] is int
+          ? response['id'] as int
+          : int.tryParse(response['id'].toString()) ?? 0;
+    }
+
+    throw Exception('Ungültiges Datenformat von API empfangen.');
   }
 }

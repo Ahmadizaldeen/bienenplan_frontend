@@ -176,6 +176,7 @@ class TaskController extends ChangeNotifier {
     String status = 'pending',
     String? deadline,
     String? attachment,
+    Set<int> groupIds = const {},
   }) async {
     final trimmedTitle = title.trim();
     if (trimmedTitle.isEmpty) {
@@ -189,7 +190,7 @@ class TaskController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _taskRepository.createTask(
+      final taskId = await _taskRepository.createTask(
         containerId: containerId,
         title: trimmedTitle,
         description: description.trim(),
@@ -197,6 +198,10 @@ class TaskController extends ChangeNotifier {
         deadline: deadline,
         attachment: attachment,
       );
+      for (final groupId in groupIds) {
+        await assignGroupToTask(taskId, groupId);
+        if (_errorMessage != null) return false;
+      }
       await loadTasks();
       return true;
     } catch (error) {
