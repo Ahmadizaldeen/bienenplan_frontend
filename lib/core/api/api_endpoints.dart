@@ -5,6 +5,7 @@ class ApiEndpoints {
       "http://localhost/BienenPlan/backend/public";
   static const String login = "$baseUrl/login";
   static const String register = "$baseUrl/register";
+  static const String me = "$baseUrl/me";
   static const String tasks = "$baseUrl/tasks";
   static const String projects = "$baseUrl/projects";
   static const String containers = "$baseUrl/containers";
