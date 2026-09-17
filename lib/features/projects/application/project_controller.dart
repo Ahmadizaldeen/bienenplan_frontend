@@ -5,12 +5,14 @@ import '../data/project_repository.dart';
 import '../data/project_local_store.dart';
 
 class ProjectController extends ChangeNotifier {
-  ProjectController({ProjectRepositoryContract? projectRepository, ProjectLocalStore? projectLocalStore})
-    : _projectRepository = projectRepository ?? ProjectRepository(),
-      _projectLocalStore = projectLocalStore ?? ProjectLocalStore();
+  ProjectController({
+    ProjectRepositoryContract? projectRepository,
+    ProjectLocalStoreContract? projectLocalStore,
+  }) : _projectRepository = projectRepository ?? ProjectRepository(),
+       _projectLocalStore = projectLocalStore ?? ProjectLocalStore();
 
   final ProjectRepositoryContract _projectRepository;
-  final ProjectLocalStore _projectLocalStore;
+  final ProjectLocalStoreContract _projectLocalStore;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -29,9 +31,9 @@ class ProjectController extends ChangeNotifier {
     }
   }
 
-    void selectProject(int projectId) {
+  void selectProject(int projectId) {
     _selectedProjectId = projectId;
-    _projectLocalStore.setSelectedProjectId(projectId); // fire-and-forget, kein await nötig
+    _projectLocalStore.setSelectedProjectId(projectId);
     notifyListeners();
   }
 
@@ -39,7 +41,7 @@ class ProjectController extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-    
+
     try {
       _projects = await _projectRepository.fetchProjects();
 
@@ -48,8 +50,7 @@ class ProjectController extends ChangeNotifier {
 
       // Falls das gespeicherte Projekt nicht mehr existiert (z.B. gelöscht),
       // auf das erste verfügbare Projekt zurückfallen.
-      final stillExists =
-          _projects.any((p) => p.id == _selectedProjectId);
+      final stillExists = _projects.any((p) => p.id == _selectedProjectId);
       if (!stillExists) {
         _selectedProjectId = _projects.isNotEmpty ? _projects.first.id : null;
       }
