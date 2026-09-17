@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
+import '../../../user/application/user_controller.dart';
 
 class UserProfileSidebar extends StatelessWidget {
   const UserProfileSidebar({
     super.key,
     required this.onLogout,
     this.projectController,
+    this.userController,
   });
 
   final VoidCallback onLogout;
@@ -16,6 +18,10 @@ class UserProfileSidebar extends StatelessWidget {
   /// Optional von außen injizierter Controller, damit z.B. HomeScreen
   /// per Pull-to-Refresh dieselbe Projektliste neu laden kann.
   final ProjectController? projectController;
+
+  /// Optional von außen injizierter Controller, damit der angezeigte
+  /// Nutzername mit HomeScreen synchron bleibt.
+  final UserController? userController;
 
   @override
   Widget build(BuildContext context) {
@@ -68,11 +74,17 @@ class UserProfileSidebar extends StatelessWidget {
                             color: Color(0xFF263A35),
                           ),
                         ),
-                        Text(
-                          'Anna Schwarz',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: const Color(0xFF5B6A66)),
-                        ),
+                        if (userController != null)
+                          AnimatedBuilder(
+                            animation: userController!,
+                            builder: (context, _) {
+                              return Text(
+                                userController!.currentUser?.name ?? '...',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: const Color(0xFF5B6A66)),
+                              );
+                            },
+                          ),
                       ],
                     ),
                   ),
