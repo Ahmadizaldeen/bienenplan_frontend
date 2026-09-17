@@ -9,6 +9,9 @@ import 'package:bienenplan_frontend/features/auth/presentation/login_screen.dart
 import 'package:bienenplan_frontend/features/auth/presentation/start_screen.dart';
 import 'package:bienenplan_frontend/features/home/presentation/home_screen.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
+import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
+    as container_model;
+import 'package:bienenplan_frontend/features/tasks/data/container_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/data/task_model.dart';
 import 'package:bienenplan_frontend/features/tasks/data/task_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/presentation/task_container_screen.dart';
@@ -65,6 +68,20 @@ class _FakeTaskRepo implements TaskRepositoryContract {
   }) async {}
 }
 
+class _FakeContainerRepo implements ContainerRepositoryContract {
+  @override
+  Future<container_model.Container> createContainer(
+    String title, {
+    int? projectId,
+  }) async =>
+      container_model.Container(id: 10, title: title, projectId: projectId);
+
+  @override
+  Future<List<container_model.Container>> fetchContainers() async => const [
+    container_model.Container(id: 10, title: 'Default Container', projectId: 1),
+  ];
+}
+
 void main() {
   testWidgets('Screens accept injected dependencies', (tester) async {
     final authRepository = AuthRepository();
@@ -92,7 +109,10 @@ void main() {
   testWidgets('TaskListScreen shows button to create new container', (
     tester,
   ) async {
-    final controller = TaskController(taskRepository: _FakeTaskRepo());
+    final controller = TaskController(
+      taskRepository: _FakeTaskRepo(),
+      containerRepository: _FakeContainerRepo(),
+    );
     await controller.loadTasks();
 
     await tester.pumpWidget(

@@ -7,6 +7,7 @@ import 'package:bienenplan_frontend/features/auth/application/auth_controller.da
 import 'package:bienenplan_frontend/features/auth/application/register_controller.dart';
 import 'package:bienenplan_frontend/features/auth/data/auth_repository.dart';
 import 'package:bienenplan_frontend/features/projects/application/project_controller.dart';
+import 'package:bienenplan_frontend/features/projects/data/project_local_store.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_model.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
@@ -271,6 +272,18 @@ class ExceptionProjectRepository implements ProjectRepositoryContract {
   }
 }
 
+class FakeProjectLocalStore implements ProjectLocalStoreContract {
+  int? selectedProjectId;
+
+  @override
+  Future<int?> getSelectedProjectId() async => selectedProjectId;
+
+  @override
+  Future<void> setSelectedProjectId(int id) async {
+    selectedProjectId = id;
+  }
+}
+
 void main() {
   test('AuthController login updates loading and success state', () async {
     final controller = AuthController(authRepository: FakeAuthRepository());
@@ -417,14 +430,20 @@ void main() {
 
   test('ProjectController loads projects and exposes state', () async {
     final repository = FakeProjectRepository();
-    final controller = ProjectController(projectRepository: repository);
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: FakeProjectLocalStore(),
+    );
 
     await controller.loadProjects();
 
     expect(repository.fetchCalled, isTrue);
     expect(controller.projects.length, 2);
     expect(controller.projects.first.name, 'BienenPlan Backend');
-    expect(controller.projects.first.id == controller.selectedProject?.id, isTrue);
+    expect(
+      controller.projects.first.id == controller.selectedProject?.id,
+      isTrue,
+    );
     expect(controller.isLoading, isFalse);
     expect(controller.errorMessage, isNull);
   });
@@ -434,6 +453,7 @@ void main() {
       projectRepository: ExceptionProjectRepository(
         Exception('Server nicht erreichbar'),
       ),
+      projectLocalStore: FakeProjectLocalStore(),
     );
 
     await controller.loadProjects();
@@ -445,7 +465,10 @@ void main() {
 
   test('ProjectController creates a project and reloads', () async {
     final repository = FakeProjectRepository();
-    final controller = ProjectController(projectRepository: repository);
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: FakeProjectLocalStore(),
+    );
 
     final success = await controller.createProject('Neues Bienen-Projekt');
 
@@ -460,7 +483,10 @@ void main() {
 
   test('ProjectController rejects empty project name', () async {
     final repository = FakeProjectRepository();
-    final controller = ProjectController(projectRepository: repository);
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: FakeProjectLocalStore(),
+    );
 
     final success = await controller.createProject('   ');
 
@@ -471,17 +497,28 @@ void main() {
 
   test('ProjectController selectProject toggles active project', () async {
     final repository = FakeProjectRepository();
-    final controller = ProjectController(projectRepository: repository);
+    final store = FakeProjectLocalStore();
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: store,
+    );
 
     await controller.loadProjects();
     expect(controller.projects[0].id == controller.selectedProject?.id, isTrue);
-    expect(controller.projects[1].id == controller.selectedProject?.id, isFalse);
+    expect(
+      controller.projects[1].id == controller.selectedProject?.id,
+      isFalse,
+    );
     expect(controller.selectedProject?.id, 1);
 
     controller.selectProject(2);
-    expect(controller.projects[0].id == controller.selectedProject?.id, isFalse);
+    expect(
+      controller.projects[0].id == controller.selectedProject?.id,
+      isFalse,
+    );
     expect(controller.projects[1].id == controller.selectedProject?.id, isTrue);
     expect(controller.selectedProject?.id, 2);
+    expect(store.selectedProjectId, 2);
   });
 
   test('Project.fromJson parses varied formats', () {
