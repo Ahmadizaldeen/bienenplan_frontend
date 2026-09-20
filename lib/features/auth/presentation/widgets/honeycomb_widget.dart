@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../animation/honeycomb_background.dart';
+import '../../animation/honeycomb_background.dart';
 
 // Kompatibilitäts-Wrapper für bestehende Aufrufe.
 // Die eigentliche Logik liegt jetzt in der separaten Hintergrund-Komponente.

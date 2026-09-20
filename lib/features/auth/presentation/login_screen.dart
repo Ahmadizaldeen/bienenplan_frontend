@@ -5,7 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
-import 'honeycomb_widget.dart';
+import 'widgets/honeycomb_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({super.key, AuthRepositoryContract? authRepository})
