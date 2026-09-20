@@ -64,7 +64,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Bitte wählen Sie zuerst ein Projekt aus.'),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -127,7 +127,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_controller.errorMessage!),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -150,7 +150,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_controller.errorMessage!),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.danger,
         ),
       );
     }
@@ -311,7 +311,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             vertical: AppSpacing.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
+                            color: AppColors.surfaceWhiteSoft.withValues(
+                              alpha: 0.25,
+                            ),
                             borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
@@ -319,7 +321,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF263A35),
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ),
@@ -336,7 +338,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             'Keine Aufgaben in diesem Container',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF6C7A8A),
+                              color: AppColors.textTertiary,
                             ),
                           ),
                         ),
