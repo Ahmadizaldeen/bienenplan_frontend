@@ -8,6 +8,7 @@ class AppColors {
   static const surface = _SurfaceColors();
   static const status = _StatusColors();
   static const honeycomb = _HoneycombColors();
+  static const register = _RegisterColors();
 
   // Legacy aliases for existing app code.
   static const primary = _BrandColors.primary;
@@ -87,7 +88,7 @@ class _BrandColors {
   static const accent = Color(0xFF477A6B);
   static const background = Color(0xFFF5F1E8);
   static const backgroundDark = Color(0xFF182522);
-  static const buttonText = Color.fromARGB(102, 5, 236, 86);
+  static const buttonText = Color.fromARGB(102, 1, 56, 20);
 }
 
 class _TextColors {
@@ -139,6 +140,35 @@ class _HoneycombColors {
   static const reflexLight = Color(0x1AFFFFFF);
   static const reflexDark = Color(0x14FFFFFF);
   static const specialNode = Color(0xF0A4D9A0);
+}
+
+class _RegisterColors {
+  const _RegisterColors();
+
+  // Linker Startpunkt des statischen Hintergrundverlaufs.
+  final backgroundStart = const Color(0xFFF2C14E);
+  // Mittlerer Farbpunkt des statischen Hintergrundverlaufs.
+  final backgroundCenter = const Color(0xFF176B55);
+  // Rechter Endpunkt des statischen Hintergrundverlaufs.
+  final backgroundEnd = const Color(0xFFFFD978);
+
+  // Dunkelste, bewegte Lichtbahn im Liquid-Glass-Hintergrund.
+  final lightDeep = const Color(0xFF12352C);
+  // Hervorgehobene, bewegte Akzentlichtbahn.
+  final lightAccent = const Color(0xFF075C47);
+  // Dezente, bewegte Lichtbahn für zusätzliche Tiefe.
+  final lightMuted = const Color(0xFFF8F2DA);
+
+  // Farbe des Icons oberhalb der Überschrift.
+  final iconTint = const Color(0xFF263A35);
+  // Textfarbe der Registrierungsüberschrift.
+  final heading = const Color(0xFF263A35);
+  // Textfarbe der erläuternden Beschreibung.
+  final body = const Color(0xFF5B6A66);
+  // Transparente Fläche hinter dem Kopfbereich-Icon.
+  final iconSurface = const Color(0x29FFFFFF);
+  // Rahmenfarbe der Icon-Fläche.
+  final iconBorder = const Color(0x668FAFA5);
 }
 
 class HoneycombThemeData {
