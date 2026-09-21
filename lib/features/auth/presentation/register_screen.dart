@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../application/register_controller.dart';
 import '../data/auth_repository.dart';
+import 'widgets/register_liquid_background.dart';
 
 class RegisterScreen extends StatefulWidget {
   RegisterScreen({super.key, AuthRepositoryContract? authRepository})
@@ -81,105 +83,172 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.accent],
-              ),
-            ),
+          const Positioned.fill(
+            child: IgnorePointer(child: RegisterLiquidBackground()),
           ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: GlassContainer(
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Konto erstellen',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Name',
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Bitte Name eingeben.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'E-Mail',
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Bitte E-Mail eingeben.';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Bitte eine gültige E-Mail eingeben.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'Passwort',
-                              suffixIcon: IconButton(
-                                tooltip: _obscurePassword
-                                    ? 'Passwort anzeigen'
-                                    : 'Passwort ausblenden',
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        tooltip: 'Zurück',
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ).animate().fadeIn(duration: 300.ms),
+                      const SizedBox(height: AppSpacing.xl),
+                      Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.register.iconSurface,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color: AppColors.register.iconBorder,
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Bitte Passwort eingeben.';
-                              }
-                              if (value.length < 6) {
-                                return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _controller.isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _register,
-                            child: const Text('Registrieren'),
-                          ),
-                  ],
+                            child: Icon(
+                              Icons.person_add_alt_1_rounded,
+                              color: AppColors.register.iconTint,
+                              size: 32,
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(duration: 400.ms)
+                          .scale(begin: const Offset(.8, .8)),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                            'Konto erstellen',
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
+                                  color: AppColors.register.heading,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 100.ms, duration: 400.ms)
+                          .slideY(begin: .15),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Registriere dich, um BienenPlan zu nutzen.',
+                        style: Theme.of(context).textTheme.bodyLarge
+                            ?.copyWith(color: AppColors.register.body),
+                      ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
+                      const SizedBox(height: AppSpacing.xl),
+                      GlassContainer(
+                            borderRadius: AppRadius.lg,
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: _nameController,
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Name',
+                                      prefixIcon: Icon(
+                                        Icons.person_outline_rounded,
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return 'Bitte Name eingeben.';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  TextFormField(
+                                    controller: _emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    autofillHints: const [AutofillHints.email],
+                                    decoration: const InputDecoration(
+                                      labelText: 'E-Mail',
+                                      prefixIcon: Icon(Icons.email_outlined),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return 'Bitte E-Mail eingeben.';
+                                      }
+                                      if (!value.contains('@')) {
+                                        return 'Bitte eine gültige E-Mail eingeben.';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  TextFormField(
+                                    controller: _passwordController,
+                                    obscureText: _obscurePassword,
+                                    autofillHints: const [
+                                      AutofillHints.newPassword,
+                                    ],
+                                    decoration: InputDecoration(
+                                      labelText: 'Passwort',
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline_rounded,
+                                      ),
+                                      suffixIcon: IconButton(
+                                        tooltip: _obscurePassword
+                                            ? 'Passwort anzeigen'
+                                            : 'Passwort ausblenden',
+                                        onPressed: () => setState(
+                                          () => _obscurePassword =
+                                              !_obscurePassword,
+                                        ),
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                        ),
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Bitte Passwort eingeben.';
+                                      }
+                                      if (value.length < 6) {
+                                        return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 52,
+                                    child: ElevatedButton(
+                                      onPressed: _controller.isLoading
+                                          ? null
+                                          : _register,
+                                      child: _controller.isLoading
+                                          ? const SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text('Registrieren'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 260.ms, duration: 500.ms)
+                          .slideY(begin: .12),
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
+                  ),
                 ),
               ),
             ),

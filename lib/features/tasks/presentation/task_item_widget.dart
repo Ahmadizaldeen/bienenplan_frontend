@@ -25,7 +25,7 @@ class TaskItemWidget extends StatelessWidget {
         return AppColors.primary;
       case 'pending':
       default:
-        return Colors.blueGrey;
+        return AppColors.statusPending;
     }
   }
 
@@ -57,9 +57,11 @@ class TaskItemWidget extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
+            color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            border: Border.all(
+              color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.15),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,7 +96,7 @@ class TaskItemWidget extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.black54),
+                              ?.copyWith(color: AppColors.mutedBlack),
                         ),
                     ],
                   ),

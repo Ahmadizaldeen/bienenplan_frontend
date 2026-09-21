@@ -26,15 +26,15 @@ class UserProfileSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boardDecoration = BoxDecoration(
-      color: const Color(0xFFD7CFAF).withValues(alpha: 0.52),
+      color: AppColors.warmPanel.withValues(alpha: 0.52),
       borderRadius: BorderRadius.circular(AppRadius.md),
       border: Border.all(
-        color: const Color(0xFFB6A87E).withValues(alpha: 0.85),
+        color: AppColors.warmPanelBorder.withValues(alpha: 0.85),
         width: 1.2,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: AppColors.shadowSoft,
           blurRadius: 6,
           offset: const Offset(0, 2),
         ),
@@ -59,7 +59,10 @@ class UserProfileSidebar extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: AppColors.primary,
                     ),
-                    child: const Icon(Icons.person, color: Colors.white),
+                    child: const Icon(
+                      Icons.person,
+                      color: AppColors.whiteOverlay,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -71,7 +74,7 @@ class UserProfileSidebar extends StatelessWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
-                            color: Color(0xFF263A35),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         if (userController != null)
@@ -81,7 +84,7 @@ class UserProfileSidebar extends StatelessWidget {
                               return Text(
                                 userController!.currentUser?.name ?? '...',
                                 style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: const Color(0xFF5B6A66)),
+                                    ?.copyWith(color: AppColors.textSecondary),
                               );
                             },
                           ),
@@ -94,19 +97,19 @@ class UserProfileSidebar extends StatelessWidget {
                       Icon(
                         Icons.crop_square,
                         size: 18,
-                        color: Color(0xFF5B6A66),
+                        color: AppColors.textSecondary,
                       ),
                       SizedBox(width: 6),
                       Icon(
                         Icons.crop_square,
                         size: 18,
-                        color: Color(0xFF5B6A66),
+                        color: AppColors.textSecondary,
                       ),
                       SizedBox(width: 6),
                       Icon(
                         Icons.crop_square,
                         size: 18,
-                        color: Color(0xFF5B6A66),
+                        color: AppColors.textSecondary,
                       ),
                     ],
                   ),
@@ -119,14 +122,14 @@ class UserProfileSidebar extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: Color(0xFF5B6A66),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.55),
+                  color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: const Row(
@@ -167,7 +170,7 @@ class UserProfileSidebar extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: Color(0xFF5B6A66),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),

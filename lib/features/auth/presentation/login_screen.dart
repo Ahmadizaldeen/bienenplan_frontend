@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
+import 'widgets/honeycomb_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({super.key, AuthRepositoryContract? authRepository})
@@ -85,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Der Hintergrund liegt hinter dem Login-Formular.
+          // Der Hintergrund wird zuerst gezeichnet, damit er den Effekt nicht übermalt.
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -94,6 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 colors: [AppColors.primary, AppColors.accent],
               ),
             ),
+          ),
+          // Hintergrund-Animation hinter dem Formular.
+          // IgnorePointer verhindert, dass die visuelle Animation Eingaben blockiert.
+          const Positioned.fill(
+            child: IgnorePointer(child: AnimatedHoneycombWidget()),
           ),
           // Das Formular wird zentriert und in den vorhandenen Glas-Container gelegt.
           Center(
