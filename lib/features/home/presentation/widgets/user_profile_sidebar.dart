@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
+import '../../../settings/presentation/app_settings_dialog.dart';
 import '../../../user/application/user_controller.dart';
 
 class UserProfileSidebar extends StatelessWidget {
@@ -133,23 +134,49 @@ class UserProfileSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+              InkWell(
+                onTap: () => AppSettingsDialog.show(
+                  context,
+                  userController: userController,
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.work_outline, color: AppColors.accent),
-                    SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Projektmanagerin',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(
+                      color: AppColors.warmPanelBorder.withValues(alpha: 0.6),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.work_outline, color: AppColors.accent),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Einstellungen',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Profil, Benachrichtigungen & mehr',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
