@@ -111,9 +111,9 @@ class _SurfaceColors {
   static const warmPanel = Color(0xFFD7CFAF);
   static const warmPanelBorder = Color(0xFFB6A87E);
   static const shadowSoft = Color(0x0A000000);
-  static const glassTintLight = Color(0x66FFFFFF);
-  static const glassBorderLight = Color(0x99FFFFFF);
-  static const glassTintDark = Color(0x33000000);
+  static const glassTintLight = Color(0x80FFFFFF);
+  static const glassBorderLight = Color(0xCCFFFFFF);
+  static const glassTintDark = Color(0x80000000);
   static const glassBorderDark = Color(0x668FAFA5);
 }
 
