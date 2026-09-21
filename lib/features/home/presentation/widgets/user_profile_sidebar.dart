@@ -66,30 +66,28 @@ class UserProfileSidebar extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'User Profile',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        if (userController != null)
-                          AnimatedBuilder(
+                    child: userController != null
+                        ? AnimatedBuilder(
                             animation: userController!,
                             builder: (context, _) {
                               return Text(
                                 userController!.currentUser?.name ?? '...',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: AppColors.textPrimary,
+                                ),
                               );
                             },
+                          )
+                        : const Text(
+                            '...',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                      ],
-                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   const Row(
