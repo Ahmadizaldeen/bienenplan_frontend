@@ -90,27 +90,6 @@ class UserProfileSidebar extends StatelessWidget {
                           ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                    ],
-                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
