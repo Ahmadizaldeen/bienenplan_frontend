@@ -82,11 +82,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // build beschreibt die komplette sichtbare Oberfläche des Bildschirms.
     return Scaffold(
       body: Stack(
         children: [
-          // Der Hintergrund wird zuerst gezeichnet, damit er den Effekt nicht übermalt.
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -96,92 +94,117 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          // Hintergrund-Animation hinter dem Formular.
-          // IgnorePointer verhindert, dass die visuelle Animation Eingaben blockiert.
           const Positioned.fill(
             child: IgnorePointer(child: AnimatedHoneycombWidget()),
           ),
-          // Das Formular wird zentriert und in den vorhandenen Glas-Container gelegt.
           Center(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: GlassContainer(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'BienenPlan',
-                        style: Theme.of(context).textTheme.headlineMedium,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 30,
+                        offset: const Offset(0, 16),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    // Form verbindet die Eingabefelder und ihre Validatoren.
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'E-Mail',
-                            ),
-                            // Validator gibt null bei gültiger Eingabe oder
-                            // einen Text für die Fehlermeldung zurück.
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Bitte E-Mail eingeben.';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Bitte eine gültige E-Mail eingeben.';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'Passwort',
-                              suffixIcon: IconButton(
-                                // setState aktualisiert Icon und Passwortdarstellung.
-                                tooltip: _obscurePassword
-                                    ? 'Passwort anzeigen'
-                                    : 'Passwort ausblenden',
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          width: 1,
+                        ),
+                      ),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text(
+                                  'BienenPlan',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium,
                                 ),
                               ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Bitte Passwort eingeben.';
-                              }
-                              return null;
-                            },
+                              const SizedBox(height: AppSpacing.lg),
+                              Form(
+                                key: _formKey,
+                                child: Column(
+                                  children: [
+                                    TextFormField(
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      decoration: const InputDecoration(
+                                        labelText: 'E-Mail',
+                                      ),
+                                      validator: (value) {
+                                        if (value == null ||
+                                            value.trim().isEmpty) {
+                                          return 'Bitte E-Mail eingeben.';
+                                        }
+                                        if (!value.contains('@')) {
+                                          return 'Bitte eine gültige E-Mail eingeben.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    TextFormField(
+                                      controller: _passwordController,
+                                      obscureText: _obscurePassword,
+                                      decoration: InputDecoration(
+                                        labelText: 'Passwort',
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscurePassword
+                                              ? 'Passwort anzeigen'
+                                              : 'Passwort ausblenden',
+                                          onPressed: () => setState(
+                                            () => _obscurePassword =
+                                                !_obscurePassword,
+                                          ),
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility
+                                                : Icons.visibility_off,
+                                          ),
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Bitte Passwort eingeben.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              _controller.isLoading
+                                  ? const CircularProgressIndicator()
+                                  : ElevatedButton(
+                                      onPressed: _login,
+                                      child: const Text('Login'),
+                                    ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    // Während des Login-Aufrufs wird der Button durch einen
-                    // Ladeindikator ersetzt, damit nicht mehrfach gesendet wird.
-                    _controller.isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _login,
-                            child: const Text('Login'),
-                          ),
-                  ],
+                  ),
                 ),
               ),
             ),
