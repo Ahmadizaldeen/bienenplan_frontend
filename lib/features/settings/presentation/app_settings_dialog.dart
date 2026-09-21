@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../user/application/user_controller.dart';
+import '../../user/presentation/profile_avatar.dart';
+import '../../user/presentation/profile_picture_dialog.dart';
 
 class AppSettingsDialog extends StatelessWidget {
   const AppSettingsDialog({super.key, this.userController});
@@ -40,22 +42,16 @@ class AppSettingsDialog extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _initialsFromName(userName),
-                      style: const TextStyle(
-                        color: AppColors.whiteOverlay,
-                        fontWeight: FontWeight.w700,
+                  if (userController != null)
+                    AnimatedBuilder(
+                      animation: userController!,
+                      builder: (_, _) => ProfileAvatar(
+                        user: userController!.currentUser,
+                        imageBytes: userController!.currentProfilePictureBytes,
                       ),
-                    ),
-                  ),
+                    )
+                  else
+                    const ProfileAvatar(user: null),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
@@ -94,7 +90,13 @@ class AppSettingsDialog extends StatelessWidget {
               _SettingsTile(
                 icon: Icons.person_outline,
                 title: 'Profil',
-                subtitle: 'Kontodaten und Account verwalten',
+                subtitle: 'Profilbild und Kontodaten verwalten',
+                onTap: userController == null
+                    ? null
+                    : () => showProfilePictureDialog(
+                        context,
+                        controller: userController!,
+                      ),
               ),
               _SettingsTile(
                 icon: Icons.notifications_none,
@@ -125,18 +127,6 @@ class AppSettingsDialog extends StatelessWidget {
       ),
     );
   }
-
-  static String _initialsFromName(String value) {
-    final cleaned = value.trim();
-    if (cleaned.isEmpty) return '?';
-
-    final parts = cleaned.split(RegExp(r'\s+'));
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-
-    return '${parts.first.substring(0, 1).toUpperCase()}${parts.last.substring(0, 1).toUpperCase()}';
-  }
 }
 
 class _SettingsTile extends StatelessWidget {
@@ -144,51 +134,57 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: AppColors.warmPanelBorder.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.accent),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: AppColors.warmPanelBorder.withValues(alpha: 0.5),
+            width: 1,
           ),
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-        ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.accent),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }
