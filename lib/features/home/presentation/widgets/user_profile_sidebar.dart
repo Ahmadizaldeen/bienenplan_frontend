@@ -70,23 +70,53 @@ class UserProfileSidebar extends StatelessWidget {
                         ? AnimatedBuilder(
                             animation: userController!,
                             builder: (context, _) {
-                              return Text(
-                                userController!.currentUser?.name ?? '...',
-                                style: const TextStyle(
+                              final userName =
+                                  userController!.currentUser?.name ?? '...';
+                              final userEmail =
+                                  userController!.currentUser?.email ?? '...';
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    userEmail,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )
+                        : const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '...',
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
                                   color: AppColors.textPrimary,
                                 ),
-                              );
-                            },
-                          )
-                        : const Text(
-                            '...',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: AppColors.textPrimary,
-                            ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '...@example.com',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
