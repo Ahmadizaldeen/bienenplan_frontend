@@ -5,6 +5,7 @@ import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
 import '../../../settings/presentation/app_settings_dialog.dart';
 import '../../../user/application/user_controller.dart';
+import '../../../user/presentation/profile_avatar.dart';
 
 class UserProfileSidebar extends StatelessWidget {
   const UserProfileSidebar({
@@ -53,18 +54,16 @@ class UserProfileSidebar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.whiteOverlay,
-                    ),
-                  ),
+                  if (userController != null)
+                    AnimatedBuilder(
+                      animation: userController!,
+                      builder: (_, _) => ProfileAvatar(
+                        user: userController!.currentUser,
+                        imageBytes: userController!.currentProfilePictureBytes,
+                      ),
+                    )
+                  else
+                    const ProfileAvatar(user: null),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: userController != null
