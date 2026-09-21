@@ -18,6 +18,7 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Aufgaben mit Titel, Beschreibung, Status und optionaler Frist erstellen und bearbeiten
 - Gruppen einer Aufgabe laden sowie zuweisen oder entfernen
 - Datei-Anhänge für Aufgaben auswählen, hochladen und anzeigen
+- Profilbilder sicher hochladen und nach einem App-Neustart wieder anzeigen
 - API-Client mit GET, POST, PUT, DELETE und Multipart-Upload
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
 
@@ -45,6 +46,7 @@ lib/
 │   ├── auth/      Auth-Gate, Startscreen, Login, Registrierung und Repository
 │   ├── home/      Home-Screen, Sidebar und Projektübersicht
 │   ├── projects/  Projektmodell, Repository, lokaler Store, Controller und Liste
+│   ├── user/      Benutzermodell, Profilzustand und Profilbild-Upload
 │   └── tasks/     Aufgaben-, Container- und Gruppenmodelle, Repositories,
 │                  Controller, Container-Ansicht und Dialoge
 └── main.dart      Einstiegspunkt und Auto-Login-Prüfung
@@ -54,12 +56,13 @@ lib/
 
 - Bei einer nicht autorisierten Antwort wird das Token gelöscht.
 - Passwörter werden nicht lokal gespeichert.
+- Profilbilder werden im Frontend und verbindlich im Backend anhand von Größe,
+  Dateiendung und Binärformat geprüft. Erlaubt sind JPG und PNG bis 5 MB.
 - Die zuletzt ausgewählte Projekt-ID wird lokal gespeichert; sie ist reiner
   Client-Zustand und wird nicht mit dem Backend synchronisiert.
 
 ## Noch offen
 
-- Echte Profildaten statt der derzeitigen Platzhalterdaten anzeigen
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
 - Teilaufgaben und Kommentare zu Aufgaben unterstützen
 - Aufgaben und Container bearbeiten oder löschen
