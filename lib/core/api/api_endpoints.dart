@@ -9,6 +9,7 @@ class ApiEndpoints {
   static String get login => "$baseUrl/login";
   static String get register => "$baseUrl/register";
   static String get me => "$baseUrl/me";
+  static String get uploadProfilePicture => "$baseUrl/me/picture";
   static String get tasks => "$baseUrl/tasks";
   static String get projects => "$baseUrl/projects";
   static String get containers => "$baseUrl/containers";
@@ -23,9 +24,13 @@ class ApiEndpoints {
   static String removeGroup(int taskId, int groupId) =>
       "$baseUrl/tasks/$taskId/groups/$groupId";
 
-  /// Baut die vollständige URL zu einem gespeicherten Anhang auf.
-  static String attachmentUrl(String relativePath) =>
-      "$serverBaseUrl/$relativePath";
+  /// Ergänzt bei relativen Upload-Pfaden die Backend-URL und bewahrt bereits
+  /// vollständige URLs, die in älteren Benutzerdaten vorkommen können.
+  static String attachmentUrl(String path) {
+    final uri = Uri.tryParse(path);
+    if (uri != null && uri.hasScheme) return path;
+    return "$serverBaseUrl/${path.replaceFirst(RegExp(r'^/+'), '')}";
+  }
 }
 
 String getBaseUrl() {
