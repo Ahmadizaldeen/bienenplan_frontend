@@ -1,10 +1,14 @@
 import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
-  // getter statt static const
-  static String get baseUrl => "${getBaseUrl()}/BienenPlan/backend/public/api";
-  static String get serverBaseUrl =>
-      "${getBaseUrl()}/BienenPlan/backend/public";
+  static const _configuredServerBaseUrl = String.fromEnvironment(
+    'API_SERVER_BASE_URL',
+  );
+
+  static String get baseUrl => '$serverBaseUrl/api';
+  static String get serverBaseUrl => _configuredServerBaseUrl.isNotEmpty
+      ? _configuredServerBaseUrl.replaceFirst(RegExp(r'/+$'), '')
+      : '${getBaseUrl()}/BienenPlan/backend/public';
 
   static String get login => "$baseUrl/login";
   static String get register => "$baseUrl/register";
