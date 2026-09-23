@@ -61,6 +61,15 @@ lib/
 - Die zuletzt ausgewählte Projekt-ID wird lokal gespeichert; sie ist reiner
   Client-Zustand und wird nicht mit dem Backend synchronisiert.
 
+## Benutzerprofil
+
+Beim Laden der Home-Ansicht ruft die App `GET /api/me` auf und zeigt Name,
+E-Mail-Adresse sowie das gespeicherte Profilbild in der Sidebar an. Über
+**Einstellungen** > **Profil** kann ein JPG- oder PNG-Bild ausgewählt werden.
+Der Upload erfolgt als Multipart-Anfrage an `POST /api/me/picture`; nach einem
+erfolgreichen Upload wird die Vorschau sofort aktualisiert und das Bild beim
+nächsten Start über den vom Backend gelieferten Pfad geladen.
+
 ## Noch offen
 
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
