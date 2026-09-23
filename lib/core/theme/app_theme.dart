@@ -84,8 +84,8 @@ class AppColors {
 class _BrandColors {
   const _BrandColors();
 
-  static const primary = Color(0xFFD9A441);
-  static const accent = Color(0xFF477A6B);
+  static const primary = Color.fromARGB(255, 152, 9, 200);
+  static const accent = Color.fromARGB(255, 107, 145, 134);
   static const background = Color(0xFFF5F1E8);
   static const backgroundDark = Color(0xFF182522);
   static const buttonText = Color.fromARGB(102, 1, 56, 20);
@@ -146,11 +146,11 @@ class _RegisterColors {
   const _RegisterColors();
 
   // Linker Startpunkt des statischen Hintergrundverlaufs.
-  final backgroundStart = const Color(0xFFF2C14E);
+  final backgroundStart = const Color.fromARGB(255, 203, 4, 163);
   // Mittlerer Farbpunkt des statischen Hintergrundverlaufs.
-  final backgroundCenter = const Color(0xFF176B55);
+  final backgroundCenter = const Color.fromARGB(255, 103, 2, 116);
   // Rechter Endpunkt des statischen Hintergrundverlaufs.
-  final backgroundEnd = const Color(0xFFFFD978);
+  final backgroundEnd = const Color.fromARGB(255, 131, 2, 101);
 
   // Dunkelste, bewegte Lichtbahn im Liquid-Glass-Hintergrund.
   final lightDeep = const Color(0xFF12352C);

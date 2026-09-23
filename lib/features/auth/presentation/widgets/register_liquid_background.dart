@@ -21,7 +21,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 14),
+      duration: const Duration(seconds: 10),
     )..repeat(reverse: true);
   }
 
@@ -63,7 +63,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                       color: AppColors.register.lightDeep,
                       widthFactor: 1.55,
                       height: 310,
-                      opacity: .42,
+                      opacity: .58,
                     ),
                   ),
                 ),
@@ -75,7 +75,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                       color: AppColors.register.lightAccent,
                       widthFactor: 1.45,
                       height: 230,
-                      opacity: .38,
+                      opacity: .52,
                     ),
                   ),
                 ),
@@ -87,7 +87,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                       color: AppColors.register.lightMuted,
                       widthFactor: 1.6,
                       height: 270,
-                      opacity: .28,
+                      opacity: .42,
                     ),
                   ),
                 ),
@@ -99,7 +99,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                       color: AppColors.register.lightDeep,
                       widthFactor: 1.35,
                       height: 210,
-                      opacity: .30,
+                      opacity: .46,
                     ),
                   ),
                 ),
@@ -132,7 +132,7 @@ class _LiquidLight extends StatelessWidget {
       heightFactor: 1,
       alignment: Alignment.topLeft,
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
         child: Align(
           alignment: Alignment.topLeft,
           child: Container(
