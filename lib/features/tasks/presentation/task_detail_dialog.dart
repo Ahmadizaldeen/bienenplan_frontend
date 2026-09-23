@@ -273,13 +273,13 @@ class _TaskDetailDialogState extends State<_TaskDetailDialog> {
                   child: Text(
                     ApiEndpoints.attachmentUrl(_attachment!),
                     style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: Colors.black54),
+                        ?.copyWith(color: AppColors.mutedBlack),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.md),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
               ],
             ],
           ),

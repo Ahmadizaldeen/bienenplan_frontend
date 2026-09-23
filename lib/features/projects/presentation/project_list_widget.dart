@@ -91,7 +91,7 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_controller.errorMessage!),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -114,10 +114,10 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
+            color: AppColors.surfaceWhiteFaint,
             borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.22),
+              color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.22),
               width: 1,
             ),
           ),
@@ -184,12 +184,12 @@ class _ProjectTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: active
               ? AppColors.accent.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.12),
+              : AppColors.surfaceWhiteFaint,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(
             color: active
                 ? AppColors.accent
-                : Colors.white.withValues(alpha: 0.25),
+                : AppColors.surfaceWhiteSoft.withValues(alpha: 0.25),
             width: active ? 1.5 : 1,
           ),
         ),
@@ -204,13 +204,17 @@ class _ProjectTile extends StatelessWidget {
                 border: Border.all(
                   color: active
                       ? AppColors.accent
-                      : Colors.white.withValues(alpha: 0.5),
+                      : AppColors.surfaceWhiteSoft.withValues(alpha: 0.5),
                   width: 2,
                 ),
                 color: active ? AppColors.accent : Colors.transparent,
               ),
               child: active
-                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  ? const Icon(
+                      Icons.check,
+                      size: 12,
+                      color: AppColors.whiteOverlay,
+                    )
                   : null,
             ),
             const SizedBox(width: AppSpacing.xs),
@@ -220,7 +224,7 @@ class _ProjectTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: const Color(0xFF263A35),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),

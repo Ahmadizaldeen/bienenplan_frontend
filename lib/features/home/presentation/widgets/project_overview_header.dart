@@ -23,7 +23,7 @@ class ProjectOverviewHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF263A35),
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -39,7 +39,7 @@ class ProjectOverviewHeader extends StatelessWidget {
               prefixIcon: const Icon(Icons.search, color: AppColors.accent),
               hintText: 'Suche nach Aufgaben oder Projekten',
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.5),
+              fillColor: AppColors.surfaceWhiteSoft,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 borderSide: BorderSide.none,
@@ -64,7 +64,7 @@ class ProjectOverviewHeader extends StatelessWidget {
               _MiniStatCard(
                 label: 'Heute',
                 value: '06',
-                color: Color(0xFF6C7A8A),
+                color: AppColors.textTertiary,
               ),
             ],
           ),
@@ -91,7 +91,7 @@ class _MiniStatCard extends StatelessWidget {
       width: 120,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.42),
+        color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.42),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Column(
@@ -101,7 +101,7 @@ class _MiniStatCard extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: Color(0xFF5B6A66),
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),

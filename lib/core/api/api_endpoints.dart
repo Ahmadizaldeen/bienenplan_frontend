@@ -1,14 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 class ApiEndpoints {
-  static const String baseUrl =
-      "http://localhost/BienenPlan/backend/public/api";
-  static const String serverBaseUrl =
-      "http://localhost/BienenPlan/backend/public";
-  static const String login = "$baseUrl/login";
-  static const String register = "$baseUrl/register";
-  static const String tasks = "$baseUrl/tasks";
-  static const String projects = "$baseUrl/projects";
-  static const String containers = "$baseUrl/containers";
-  static const String groups = "$baseUrl/groups";
+  // getter statt static const
+  static String get baseUrl => "${getBaseUrl()}/BienenPlan/backend/public/api";
+  static String get serverBaseUrl =>
+      "${getBaseUrl()}/BienenPlan/backend/public";
+
+  static String get login => "$baseUrl/login";
+  static String get register => "$baseUrl/register";
+  static String get me => "$baseUrl/me";
+  static String get uploadProfilePicture => "$baseUrl/me/picture";
+  static String get tasks => "$baseUrl/tasks";
+  static String get projects => "$baseUrl/projects";
+  static String get containers => "$baseUrl/containers";
+  static String get groups => "$baseUrl/groups";
 
   static String taskDetail(int id) => "$baseUrl/tasks/$id";
   static String updateTaskStatus(int id) => "$baseUrl/tasks/$id/status";
@@ -19,8 +24,28 @@ class ApiEndpoints {
   static String removeGroup(int taskId, int groupId) =>
       "$baseUrl/tasks/$taskId/groups/$groupId";
 
-  /// Baut die vollständige URL zu einem gespeicherten Anhang (relativer Pfad
-  /// wie z.B. "uploads/tasks/xyz.pdf") auf.
-  static String attachmentUrl(String relativePath) =>
-      "$serverBaseUrl/$relativePath";
+  /// Ergänzt bei relativen Upload-Pfaden die Backend-URL und bewahrt bereits
+  /// vollständige URLs, die in älteren Benutzerdaten vorkommen können.
+  static String attachmentUrl(String path) {
+    final uri = Uri.tryParse(path);
+    if (uri != null && uri.hasScheme) return path;
+    return "$serverBaseUrl/${path.replaceFirst(RegExp(r'^/+'), '')}";
+  }
+}
+
+String getBaseUrl() {
+  if (kIsWeb) {
+    return 'http://localhost'; // Für Chrome / Web
+  }
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return 'http://172.23.240.1';
+    case TargetPlatform.iOS:
+    case TargetPlatform.windows:
+    case TargetPlatform.macOS:
+    case TargetPlatform.linux:
+    case TargetPlatform.fuchsia:
+      return 'http://localhost';
+  }
 }

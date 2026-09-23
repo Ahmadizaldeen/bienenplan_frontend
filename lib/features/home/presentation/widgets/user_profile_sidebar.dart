@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
+import '../../../settings/presentation/app_settings_dialog.dart';
+import '../../../user/application/user_controller.dart';
+import '../../../user/presentation/profile_avatar.dart';
 
 class UserProfileSidebar extends StatelessWidget {
   const UserProfileSidebar({
     super.key,
     required this.onLogout,
     this.projectController,
+    this.userController,
   });
 
   final VoidCallback onLogout;
@@ -17,18 +21,22 @@ class UserProfileSidebar extends StatelessWidget {
   /// per Pull-to-Refresh dieselbe Projektliste neu laden kann.
   final ProjectController? projectController;
 
+  /// Optional von außen injizierter Controller, damit der angezeigte
+  /// Nutzername mit HomeScreen synchron bleibt.
+  final UserController? userController;
+
   @override
   Widget build(BuildContext context) {
     final boardDecoration = BoxDecoration(
-      color: const Color(0xFFD7CFAF).withValues(alpha: 0.52),
+      color: AppColors.warmPanel.withValues(alpha: 0.52),
       borderRadius: BorderRadius.circular(AppRadius.md),
       border: Border.all(
-        color: const Color(0xFFB6A87E).withValues(alpha: 0.85),
+        color: AppColors.warmPanelBorder.withValues(alpha: 0.85),
         width: 1.2,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: AppColors.shadowSoft,
           blurRadius: 6,
           offset: const Offset(0, 2),
         ),
@@ -46,58 +54,72 @@ class UserProfileSidebar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary,
-                    ),
-                    child: const Icon(Icons.person, color: Colors.white),
-                  ),
+                  if (userController != null)
+                    AnimatedBuilder(
+                      animation: userController!,
+                      builder: (_, _) => ProfileAvatar(
+                        user: userController!.currentUser,
+                        imageBytes: userController!.currentProfilePictureBytes,
+                      ),
+                    )
+                  else
+                    const ProfileAvatar(user: null),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'User Profile',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Color(0xFF263A35),
+                    child: userController != null
+                        ? AnimatedBuilder(
+                            animation: userController!,
+                            builder: (context, _) {
+                              final userName =
+                                  userController!.currentUser?.name ?? '...';
+                              final userEmail =
+                                  userController!.currentUser?.email ?? '...';
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    userEmail,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )
+                        : const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '...',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '...@example.com',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Text(
-                          'Anna Schwarz',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: const Color(0xFF5B6A66)),
-                        ),
-                      ],
-                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: Color(0xFF5B6A66),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: Color(0xFF5B6A66),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.crop_square,
-                        size: 18,
-                        color: Color(0xFF5B6A66),
-                      ),
-                    ],
-                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -107,27 +129,53 @@ class UserProfileSidebar extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: Color(0xFF5B6A66),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+              InkWell(
+                onTap: () => AppSettingsDialog.show(
+                  context,
+                  userController: userController,
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.work_outline, color: AppColors.accent),
-                    SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Projektmanagerin',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(
+                      color: AppColors.warmPanelBorder.withValues(alpha: 0.6),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.work_outline, color: AppColors.accent),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Einstellungen',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Profil, Benachrichtigungen & mehr',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -155,7 +203,7 @@ class UserProfileSidebar extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: Color(0xFF5B6A66),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
