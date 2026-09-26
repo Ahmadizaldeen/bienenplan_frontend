@@ -112,13 +112,16 @@ Für ein physisches Android-Gerät muss der Rechner und das Gerät im selben WLA
 sein. Starte die App mit der LAN-IP des Rechners und dem Apache-Port:
 
 ```text
-flutter run --dart-define=API_SERVER_BASE_URL=http://192.168.1.25:8080/BienenPlan/backend/public
+flutter run --dart-define=API_SERVER_BASE_URL=http://192.168.1.25:8080/BienenPlanBackend/backend/public
 ```
 
 Ersetze `192.168.1.25:8080` durch die Ausgabe von `ipconfig` (IPv4-Adresse)
 und den in XAMPP verwendeten Apache-Port. Bei Standard-Apache-Port 80 entfällt
 `:8080`. Die Windows-Firewall muss eingehende Verbindungen zu diesem Port
 zulassen.
+Wenn ein Apache-VirtualHost direkt auf `backend/public` zeigt, gib
+statt des Projektpfads nur den Host und ggf. Port an, z. B.
+`API_SERVER_BASE_URL=http://192.168.1.25:8080`.
 
 ## Backend
 
