@@ -5,6 +5,7 @@ import '../application/task_controller.dart';
 import '../data/group_model.dart';
 import '../data/task_model.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 /// Zeigt die Detailansicht einer Aufgabe als Dialog. Erlaubt das Bearbeiten
@@ -122,7 +123,19 @@ class _TaskDetailDialogState extends State<_TaskDetailDialog> {
   }
 
   Future<void> _pickAndUploadFile() async {
-    final files = await FilePicker.pickFiles();
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const [
+        'pdf',
+        'txt',
+        'png',
+        'jpg',
+        'jpeg',
+        'gif',
+        'docx',
+        'xlsx',
+      ],
+    );
     if (files.isEmpty) return;
 
     final file = files.single;
@@ -133,6 +146,30 @@ class _TaskDetailDialogState extends State<_TaskDetailDialog> {
     final bytes = await file.readAsBytes();
 
     if (!mounted) return;
+
+    // Die Prüfung läuft vor dem Netzwerkaufruf; das Backend wiederholt sie als
+    // verbindliche Sicherheitsgrenze für nicht vertrauenswürdige Clients.
+    final validationError = FileValidationService.validate(
+      bytes,
+      file.name,
+      allowedExtensions: const {
+        'pdf',
+        'txt',
+        'png',
+        'jpg',
+        'jpeg',
+        'gif',
+        'docx',
+        'xlsx',
+      },
+    );
+    if (validationError != null) {
+      setState(() {
+        _isUploading = false;
+        _error = validationError;
+      });
+      return;
+    }
 
     final attachment = await widget.controller.uploadTaskAttachment(
       widget.task.id,
