@@ -18,6 +18,7 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Aufgaben mit Titel, Beschreibung, Status und optionaler Frist erstellen und bearbeiten
 - Gruppen einer Aufgabe laden sowie zuweisen oder entfernen
 - Datei-Anhänge für Aufgaben auswählen, hochladen und anzeigen
+- Upload-Dateien vor dem Senden nach Endung, Größe und Binärinhalt prüfen
 - Profilbilder sicher hochladen und nach einem App-Neustart wieder anzeigen
 - API-Client mit GET, POST, PUT, DELETE und Multipart-Upload
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
@@ -38,8 +39,9 @@ Benutzer
 
 ```text
 lib/
-├── core/
+  ├── core/
 │   ├── api/       HTTP-Client, Endpunkte und API-Fehler
+│   ├── files/     Wiederverwendbare Datei- und Inhaltsprüfung
 │   ├── routing/   Routen und Navigation
 │   └── theme/     Farben, Abstände, Themes und GlassContainer
 ├── features/
@@ -105,12 +107,18 @@ flutter analyze
 flutter test
 ```
 
-Die Backend-Basis-URL ist aktuell in
-`lib/core/api/api_endpoints.dart` auf die lokale XAMPP-Adresse gesetzt:
+Die Backend-Basis-URL wird in `lib/core/api/api_endpoints.dart` zusammengesetzt.
+Für ein physisches Android-Gerät muss der Rechner und das Gerät im selben WLAN
+sein. Starte die App mit der LAN-IP des Rechners und dem Apache-Port:
 
 ```text
-http://localhost/BienenPlan/backend/public/api
+flutter run --dart-define=API_SERVER_BASE_URL=http://192.168.1.25:8080/BienenPlan/backend/public
 ```
+
+Ersetze `192.168.1.25:8080` durch die Ausgabe von `ipconfig` (IPv4-Adresse)
+und den in XAMPP verwendeten Apache-Port. Bei Standard-Apache-Port 80 entfällt
+`:8080`. Die Windows-Firewall muss eingehende Verbindungen zu diesem Port
+zulassen.
 
 ## Backend
 
