@@ -8,7 +8,7 @@ class ApiEndpoints {
   static String get baseUrl => '$serverBaseUrl/api';
   static String get serverBaseUrl => _configuredServerBaseUrl.isNotEmpty
       ? _configuredServerBaseUrl.replaceFirst(RegExp(r'/+$'), '')
-      : '${getBaseUrl()}/BienenPlan/backend/public';
+      : '${getBaseUrl()}/BienenPlanBackend/backend/public';
 
   static String get login => "$baseUrl/login";
   static String get register => "$baseUrl/register";
