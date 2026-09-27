@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../application/profile_image_validator.dart';
 import '../application/user_controller.dart';
 import 'profile_avatar.dart';
 
@@ -45,7 +45,14 @@ class _ProfilePictureDialogState extends State<_ProfilePictureDialog> {
 
     final file = files.single;
     final bytes = await file.readAsBytes();
-    final error = ProfileImageValidator.validate(bytes, file.name);
+    // Der gemeinsame Service verhindert, dass der Profilbild-Dialog eine
+    // eigene und später abweichende Prüfungslogik entwickelt.
+    final error = FileValidationService.validate(
+      bytes,
+      file.name,
+      allowedExtensions: const {'jpg', 'jpeg', 'png'},
+      maxFileSize: 5 * 1024 * 1024,
+    );
     if (!mounted) return;
 
     setState(() {
