@@ -91,9 +91,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       text: task?.description ?? '',
     );
     _attachmentController = TextEditingController(text: task?.attachment ?? '');
-    _status = _statusOptions.containsKey(task?.status)
-        ? task!.status
-        : 'open';
+    _status = _statusOptions.containsKey(task?.status) ? task!.status : 'open';
     _deadline = task?.deadlineDateTime;
     _assignedGroupIds = task?.groupIds.toSet() ?? {};
     _loadGroups();
@@ -333,6 +331,11 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedGroupIds = _assignedGroupIds.toList()..sort();
+    final availableGroups = _allGroups
+        .where((group) => !_assignedGroupIds.contains(group.id))
+        .toList();
+
     return AlertDialog(
       title: Text(_isEditing ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'),
       content: SizedBox(
@@ -391,16 +394,55 @@ class _TaskDialogState extends State<_TaskDialog> {
                 else if (_allGroups.isEmpty)
                   const Text('Keine Gruppen vorhanden.')
                 else
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.xs,
-                    children: _allGroups.map((group) {
-                      return FilterChip(
-                        label: Text(group.name),
-                        selected: _assignedGroupIds.contains(group.id),
-                        onSelected: (selected) => _toggleGroup(group, selected),
-                      );
-                    }).toList(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<Group>(
+                        key: ValueKey(selectedGroupIds.join(',')),
+                        initialValue: null,
+                        hint: const Text('Gruppe auswählen'),
+                        items: availableGroups
+                            .map(
+                              (group) => DropdownMenuItem<Group>(
+                                value: group,
+                                child: Text(group.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: availableGroups.isEmpty
+                            ? null
+                            : (group) {
+                                if (group != null) _toggleGroup(group, true);
+                              },
+                      ),
+                      if (_assignedGroupIds.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text('Keine Gruppen ausgewählt.'),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
+                            children: _allGroups
+                                .where(
+                                  (group) =>
+                                      _assignedGroupIds.contains(group.id),
+                                )
+                                .map(
+                                  (group) => InputChip(
+                                    label: Text(group.name),
+                                    onDeleted: _isSaving
+                                        ? null
+                                        : () => _toggleGroup(group, false),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                    ],
                   ),
                 const SizedBox(height: AppSpacing.md),
                 Row(
