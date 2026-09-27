@@ -96,7 +96,11 @@ class TaskItemWidget extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.mutedBlack),
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                         ),
                     ],
                   ),
@@ -115,7 +119,7 @@ class TaskItemWidget extends StatelessWidget {
                 child: Text(
                   _getStatusLabel(task.status),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
                   ),
