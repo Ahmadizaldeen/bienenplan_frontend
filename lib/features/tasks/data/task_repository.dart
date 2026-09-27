@@ -71,7 +71,7 @@ class TaskRepository implements TaskRepositoryContract {
     int taskId, {
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
   }) async {
@@ -108,7 +108,7 @@ class TaskRepository implements TaskRepositoryContract {
     required int containerId,
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
   }) async {

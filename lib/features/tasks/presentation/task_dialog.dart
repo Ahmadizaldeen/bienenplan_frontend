@@ -46,7 +46,7 @@ class _TaskDialog extends StatefulWidget {
 
 class _TaskDialogState extends State<_TaskDialog> {
   static const _statusOptions = {
-    'pending': 'Offen',
+    'open': 'Offen',
     'in_progress': 'In Bearbeitung',
     'done': 'Erledigt',
   };
@@ -93,7 +93,7 @@ class _TaskDialogState extends State<_TaskDialog> {
     _attachmentController = TextEditingController(text: task?.attachment ?? '');
     _status = _statusOptions.containsKey(task?.status)
         ? task!.status
-        : 'pending';
+        : 'open';
     _deadline = task?.deadlineDateTime;
     _assignedGroupIds = task?.groupIds.toSet() ?? {};
     _loadGroups();

@@ -78,7 +78,7 @@ class TaskController extends ChangeNotifier {
     int taskId, {
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
   }) async {
@@ -173,7 +173,7 @@ class TaskController extends ChangeNotifier {
     required int containerId,
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
     Set<int> groupIds = const {},
@@ -194,7 +194,7 @@ class TaskController extends ChangeNotifier {
     required int containerId,
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
     Set<int> groupIds = const {},

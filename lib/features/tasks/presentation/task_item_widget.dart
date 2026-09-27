@@ -18,11 +18,12 @@ class TaskItemWidget extends StatelessWidget {
   });
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
+    switch (status.trim().toLowerCase()) {
       case 'done':
         return AppColors.accent;
       case 'in_progress':
         return AppColors.primary;
+      case 'open':
       case 'pending':
       default:
         return AppColors.statusPending;
@@ -30,15 +31,17 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   String _getStatusLabel(String status) {
-    switch (status.toLowerCase()) {
+    switch (status.trim().toLowerCase()) {
       case 'done':
         return 'Erledigt';
       case 'in_progress':
         return 'In Bearbeitung';
+      case 'open':
       case 'pending':
+      case '':
         return 'Offen';
       default:
-        return status;
+        return status.trim();
     }
   }
 

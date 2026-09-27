@@ -58,6 +58,8 @@ class Task {
       return raw.split(',').map((e) => e.trim()).toList();
     }
 
+    final status = json['status']?.toString().trim();
+
     return Task(
       id: json['id'] is int
           ? json['id']
@@ -75,7 +77,7 @@ class Task {
           : int.tryParse(json['created_by'].toString()) ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      status: json['status'] ?? 'pending',
+      status: status == null || status.isEmpty ? 'open' : status,
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
       deadline: json['deadline'],
