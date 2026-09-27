@@ -178,11 +178,32 @@ class TaskController extends ChangeNotifier {
     String? attachment,
     Set<int> groupIds = const {},
   }) async {
+    return await createTaskWithId(
+          containerId: containerId,
+          title: title,
+          description: description,
+          status: status,
+          deadline: deadline,
+          attachment: attachment,
+          groupIds: groupIds,
+        ) !=
+        null;
+  }
+
+  Future<int?> createTaskWithId({
+    required int containerId,
+    required String title,
+    String description = '',
+    String status = 'pending',
+    String? deadline,
+    String? attachment,
+    Set<int> groupIds = const {},
+  }) async {
     final trimmedTitle = title.trim();
     if (trimmedTitle.isEmpty) {
       _errorMessage = 'Aufgaben-Titel darf nicht leer sein.';
       notifyListeners();
-      return false;
+      return null;
     }
 
     _isLoading = true;
@@ -200,13 +221,13 @@ class TaskController extends ChangeNotifier {
       );
       for (final groupId in groupIds) {
         await assignGroupToTask(taskId, groupId);
-        if (_errorMessage != null) return false;
+        if (_errorMessage != null) return null;
       }
       await loadTasks();
-      return true;
+      return taskId;
     } catch (error) {
       _errorMessage = error.toString().replaceAll('Exception: ', '');
-      return false;
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
