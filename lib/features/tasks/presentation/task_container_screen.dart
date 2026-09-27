@@ -280,7 +280,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       containerTitles.putIfAbsent(container.id, () => container.title);
     }
 
-    final containerIds = grouped.keys.toList();
+    final containerIds = grouped.keys.toList()..sort();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
