@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bienenplan_frontend/core/api/api_exception.dart';
@@ -16,6 +17,7 @@ import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
     as container_model;
 import 'package:bienenplan_frontend/features/tasks/data/task_model.dart';
 import 'package:bienenplan_frontend/features/tasks/data/task_repository.dart';
+import 'package:bienenplan_frontend/features/tasks/presentation/task_container_screen.dart';
 
 class FakeAuthRepository implements AuthRepositoryContract {
   bool loginCalled = false;
@@ -330,6 +332,36 @@ void main() {
     expect(controller.extraContainers.length, 1);
     expect(controller.extraContainers.first.title, 'In Progress');
     expect(controller.extraContainers.first.projectId, 5);
+  });
+
+  testWidgets('new empty container is displayed after older containers', (
+    tester,
+  ) async {
+    final containerRepository = FakeContainerRepository()
+      ..containers.addAll([
+        const container_model.Container(id: 11, title: 'Neu erstellt'),
+        const container_model.Container(id: 8, title: 'Alter leerer'),
+      ]);
+    final controller = TaskController(
+      taskRepository: FakeTaskRepository(),
+      containerRepository: containerRepository,
+    );
+    await controller.loadTasks();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TaskListScreen(controller: controller),
+        ),
+      ),
+    );
+
+    final newColumnX = tester.getTopLeft(find.text('Neu erstellt')).dx;
+    final oldColumnX = tester.getTopLeft(find.text('Alter leerer')).dx;
+    expect(newColumnX, greaterThan(oldColumnX));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
   });
 
   test('TaskController reloads the task list (incl. the new task) after createTask', () async {
