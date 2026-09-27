@@ -22,3 +22,19 @@ class AppUser {
     );
   }
 }
+
+class GroupUser {
+  final int id;
+  final String name;
+
+  const GroupUser({required this.id, required this.name});
+
+  factory GroupUser.fromJson(Map<String, dynamic> json) {
+    return GroupUser(
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.parse(json['id'].toString()),
+      name: json['name'] as String,
+    );
+  }
+}
