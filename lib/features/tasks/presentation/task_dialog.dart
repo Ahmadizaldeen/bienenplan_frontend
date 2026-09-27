@@ -9,6 +9,7 @@ import '../data/task_model.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
+import 'create_group_dialog.dart';
 
 /// Zeigt dieselbe Aufgabenmaske zum Erstellen und Bearbeiten.
 /// Gibt `true` zurück, wenn die Aufgabe erstellt oder geändert wurde.
@@ -69,10 +70,12 @@ class _TaskDialogState extends State<_TaskDialog> {
   DateTime? _deadline;
 
   bool _isLoadingGroups = true;
+  bool _isCreatingGroup = false;
   bool _isSaving = false;
   bool _isUploading = false;
   bool _changed = false;
   String? _error;
+  String? _groupNotice;
   List<Group> _allGroups = const [];
   late final Set<int> _assignedGroupIds;
   int? _createdTaskId;
@@ -161,6 +164,74 @@ class _TaskDialogState extends State<_TaskDialog> {
         _error = widget.controller.errorMessage;
       });
     }
+  }
+
+  Future<void> _createAndAssignGroup() async {
+    setState(() {
+      _isCreatingGroup = true;
+      _error = null;
+      _groupNotice = null;
+    });
+    final users = await widget.controller.fetchAllUsers();
+    if (!mounted) return;
+    if (users == null) {
+      setState(() {
+        _isCreatingGroup = false;
+        _error = widget.controller.errorMessage;
+      });
+      return;
+    }
+    setState(() => _isCreatingGroup = false);
+
+    final request = await showDialog<NewGroupRequest>(
+      context: context,
+      builder: (dialogContext) => CreateGroupDialog(users: users),
+    );
+    if (request == null || !mounted) return;
+
+    final normalizedName = request.name.toLowerCase();
+    Group? existingGroup;
+    for (final group in _allGroups) {
+      if (group.name.trim().toLowerCase() == normalizedName) {
+        existingGroup = group;
+        break;
+      }
+    }
+
+    if (existingGroup != null) {
+      if (!_assignedGroupIds.contains(existingGroup.id)) {
+        await _toggleGroup(existingGroup, true);
+      }
+      if (!mounted) return;
+      setState(() {
+        _groupNotice = 'Die Gruppe existiert bereits und wurde ausgewählt; ihre Mitglieder wurden nicht geändert.';
+      });
+      return;
+    }
+
+    setState(() => _isCreatingGroup = true);
+    final group = await widget.controller.createGroup(
+      request.name,
+      userIds: request.userIds,
+    );
+    if (!mounted) return;
+    if (group == null) {
+      setState(() {
+        _isCreatingGroup = false;
+        _error = widget.controller.errorMessage;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCreatingGroup = false;
+      _allGroups = [..._allGroups, group]
+        ..sort(
+          (first, second) =>
+              first.label.toLowerCase().compareTo(second.label.toLowerCase()),
+        );
+    });
+    await _toggleGroup(group, true);
   }
 
   Future<void> _pickDeadline() async {
@@ -391,29 +462,50 @@ class _TaskDialogState extends State<_TaskDialog> {
                     padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                     child: Center(child: CircularProgressIndicator()),
                   )
-                else if (_allGroups.isEmpty)
-                  const Text('Keine Gruppen vorhanden.')
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DropdownButtonFormField<Group>(
-                        key: ValueKey(selectedGroupIds.join(',')),
-                        initialValue: null,
-                        hint: const Text('Gruppe auswählen'),
-                        items: availableGroups
-                            .map(
-                              (group) => DropdownMenuItem<Group>(
-                                value: group,
-                                child: Text(group.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: availableGroups.isEmpty
-                            ? null
-                            : (group) {
-                                if (group != null) _toggleGroup(group, true);
-                              },
+                      if (availableGroups.isEmpty)
+                        Text(
+                          _allGroups.isEmpty
+                              ? 'Noch keine Gruppen vorhanden.'
+                              : 'Alle vorhandenen Gruppen sind ausgewählt.',
+                        )
+                      else
+                        DropdownButtonFormField<Group>(
+                          key: ValueKey(selectedGroupIds.join(',')),
+                          initialValue: null,
+                          hint: const Text('Gruppe auswählen'),
+                          items: availableGroups
+                              .map(
+                                (group) => DropdownMenuItem<Group>(
+                                  value: group,
+                                  child: Text(group.label),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (group) {
+                            if (group != null) _toggleGroup(group, true);
+                          },
+                        ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _isSaving || _isCreatingGroup
+                              ? null
+                              : _createAndAssignGroup,
+                          icon: _isCreatingGroup
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.add),
+                          label: const Text('Neue Gruppe'),
+                        ),
                       ),
                       if (_assignedGroupIds.isEmpty)
                         const Padding(
@@ -433,13 +525,21 @@ class _TaskDialogState extends State<_TaskDialog> {
                                 )
                                 .map(
                                   (group) => InputChip(
-                                    label: Text(group.name),
+                                    label: Text(group.label),
                                     onDeleted: _isSaving
                                         ? null
                                         : () => _toggleGroup(group, false),
                                   ),
                                 )
                                 .toList(),
+                          ),
+                        ),
+                      if (_groupNotice != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            _groupNotice!,
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
                     ],
