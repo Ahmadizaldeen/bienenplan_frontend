@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -131,15 +129,17 @@ class _LiquidLight extends StatelessWidget {
       widthFactor: widthFactor,
       heightFactor: 1,
       alignment: Alignment.topLeft,
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: opacity),
-              borderRadius: BorderRadius.circular(120),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(120),
+            gradient: RadialGradient(
+              colors: [
+                color.withValues(alpha: opacity),
+                color.withValues(alpha: 0),
+              ],
             ),
           ),
         ),

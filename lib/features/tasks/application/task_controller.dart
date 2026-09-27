@@ -6,6 +6,7 @@ import '../data/container_repository.dart';
 import '../data/task_repository.dart';
 import '../data/group_model.dart';
 import '../data/group_repository.dart';
+import '../../user/data/user_model.dart';
 
 class TaskController extends ChangeNotifier {
   TaskController({
@@ -44,7 +45,7 @@ class TaskController extends ChangeNotifier {
       _tasks = results[0] as List<Task>;
       _extraContainers = results[1] as List<container_model.Container>;
     } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
+      _errorMessage = _messageOf(error);
       _tasks = const [];
     } finally {
       _isLoading = false;
@@ -52,33 +53,40 @@ class TaskController extends ChangeNotifier {
     }
   }
 
-  Future<void> updateTaskStatus(int taskId, String newStatus) async {
+  // Einheitliche Fehlermeldung ohne "Exception: "-Präfix.
+  String _messageOf(Object error) =>
+      error.toString().replaceAll('Exception: ', '');
+
+  // Gemeinsame Fehlerbehandlung (ersetzt den vorher in jeder Methode
+  // wiederholten try/catch): Fehler merken, UI benachrichtigen, Fallback liefern.
+  Future<T> _guard<T>(Future<T> Function() action, T fallback) async {
     try {
+      return await action();
+    } catch (error) {
+      _errorMessage = _messageOf(error);
+      notifyListeners();
+      return fallback;
+    }
+  }
+
+  Future<void> updateTaskStatus(int taskId, String newStatus) {
+    return _guard(() async {
       await _taskRepository.updateTaskStatus(taskId, newStatus);
       await loadTasks();
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-    }
+    }, null);
   }
 
   /// Lädt eine einzelne Aufgabe mit allen Details (u.a. Gruppen) neu, z.B.
   /// für die Detailansicht. Aktualisiert nicht die Task-Liste selbst.
-  Future<Task?> fetchTaskDetail(int taskId) async {
-    try {
-      return await _taskRepository.fetchTaskDetail(taskId);
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return null;
-    }
+  Future<Task?> fetchTaskDetail(int taskId) {
+    return _guard<Task?>(() => _taskRepository.fetchTaskDetail(taskId), null);
   }
 
   Future<bool> updateTask(
     int taskId, {
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
     String? deadline,
     String? attachment,
   }) async {
@@ -89,7 +97,7 @@ class TaskController extends ChangeNotifier {
       return false;
     }
 
-    try {
+    return _guard(() async {
       await _taskRepository.updateTask(
         taskId,
         title: trimmedTitle,
@@ -100,19 +108,15 @@ class TaskController extends ChangeNotifier {
       );
       await loadTasks();
       return true;
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return false;
-    }
+    }, false);
   }
 
   Future<String?> uploadTaskAttachment(
     int taskId,
     Uint8List bytes,
     String filename,
-  ) async {
-    try {
+  ) {
+    return _guard<String?>(() async {
       final attachment = await _taskRepository.uploadAttachment(
         taskId,
         bytes,
@@ -120,60 +124,85 @@ class TaskController extends ChangeNotifier {
       );
       await loadTasks();
       return attachment;
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
+    }, null);
+  }
+
+  Future<List<Group>> fetchAllGroups() {
+    return _guard(_groupRepository.fetchAllGroups, const <Group>[]);
+  }
+
+  Future<List<Group>> fetchGroupsForTask(int taskId) {
+    return _guard(
+      () => _groupRepository.fetchGroupsForTask(taskId),
+      const <Group>[],
+    );
+  }
+
+  Future<List<GroupUser>?> fetchAllUsers() {
+    return _guard<List<GroupUser>?>(_groupRepository.fetchAllUsers, null);
+  }
+
+  Future<Group?> createGroup(
+    String name, {
+    List<int> userIds = const [],
+  }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      _errorMessage = 'Der Gruppenname darf nicht leer sein.';
       notifyListeners();
       return null;
     }
+
+    return _guard<Group?>(() async {
+      final group = await _groupRepository.createGroup(
+        trimmedName,
+        userIds: userIds,
+      );
+      _errorMessage = null;
+      return group;
+    }, null);
   }
 
-  Future<List<Group>> fetchAllGroups() async {
-    try {
-      return await _groupRepository.fetchAllGroups();
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return const [];
-    }
-  }
-
-  Future<List<Group>> fetchGroupsForTask(int taskId) async {
-    try {
-      return await _groupRepository.fetchGroupsForTask(taskId);
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return const [];
-    }
-  }
-
-  Future<bool> assignGroupToTask(int taskId, int groupId) async {
-    try {
+  Future<bool> assignGroupToTask(int taskId, int groupId) {
+    return _guard(() async {
       await _groupRepository.assignGroupToTask(taskId, groupId);
       return true;
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return false;
-    }
+    }, false);
   }
 
-  Future<bool> removeGroupFromTask(int taskId, int groupId) async {
-    try {
+  Future<bool> removeGroupFromTask(int taskId, int groupId) {
+    return _guard(() async {
       await _groupRepository.removeGroupFromTask(taskId, groupId);
       return true;
-    } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return false;
-    }
+    }, false);
   }
 
   Future<bool> createTask({
     required int containerId,
     required String title,
     String description = '',
-    String status = 'pending',
+    String status = 'open',
+    String? deadline,
+    String? attachment,
+    Set<int> groupIds = const {},
+  }) async {
+    return await createTaskWithId(
+          containerId: containerId,
+          title: title,
+          description: description,
+          status: status,
+          deadline: deadline,
+          attachment: attachment,
+          groupIds: groupIds,
+        ) !=
+        null;
+  }
+
+  Future<int?> createTaskWithId({
+    required int containerId,
+    required String title,
+    String description = '',
+    String status = 'open',
     String? deadline,
     String? attachment,
     Set<int> groupIds = const {},
@@ -182,7 +211,7 @@ class TaskController extends ChangeNotifier {
     if (trimmedTitle.isEmpty) {
       _errorMessage = 'Aufgaben-Titel darf nicht leer sein.';
       notifyListeners();
-      return false;
+      return null;
     }
 
     _isLoading = true;
@@ -200,13 +229,13 @@ class TaskController extends ChangeNotifier {
       );
       for (final groupId in groupIds) {
         await assignGroupToTask(taskId, groupId);
-        if (_errorMessage != null) return false;
+        if (_errorMessage != null) return null;
       }
       await loadTasks();
-      return true;
+      return taskId;
     } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
-      return false;
+      _errorMessage = _messageOf(error);
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -233,7 +262,7 @@ class TaskController extends ChangeNotifier {
       await loadTasks();
       return true;
     } catch (error) {
-      _errorMessage = error.toString().replaceAll('Exception: ', '');
+      _errorMessage = _messageOf(error);
       return false;
     } finally {
       _isLoading = false;

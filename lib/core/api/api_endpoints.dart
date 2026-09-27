@@ -13,6 +13,7 @@ class ApiEndpoints {
   static String get login => "$baseUrl/login";
   static String get register => "$baseUrl/register";
   static String get me => "$baseUrl/me";
+  static String get users => "$baseUrl/users";
   static String get uploadProfilePicture => "$baseUrl/me/picture";
   static String get tasks => "$baseUrl/tasks";
   static String get projects => "$baseUrl/projects";

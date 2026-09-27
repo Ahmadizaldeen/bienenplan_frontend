@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../application/task_controller.dart';
 import '../data/container_model.dart' as container_model;
 import '../data/task_model.dart';
-import 'task_create_dialog.dart';
-import 'task_detail_dialog.dart';
+import 'task_dialog.dart';
 import 'task_item_widget.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
@@ -136,7 +135,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _showCreateTaskDialog(int containerId) async {
-    final success = await showCreateTaskDialog(
+    final success = await showTaskDialog(
       context,
       controller: _controller,
       containerId: containerId,
@@ -157,9 +156,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _showTaskDetailDialog(Task task) async {
-    final changed = await showTaskDetailDialog(
+    final changed = await showTaskDialog(
       context,
       controller: _controller,
+      containerId: task.containerId,
       task: task,
     );
     if (!mounted) return;
@@ -280,7 +280,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       containerTitles.putIfAbsent(container.id, () => container.title);
     }
 
-    final containerIds = grouped.keys.toList();
+    final containerIds = grouped.keys.toList()..sort();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

@@ -14,9 +14,15 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Projekte über die REST-API laden, erstellen und auswählen
 - Zuletzt ausgewähltes Projekt lokal speichern und beim Laden wiederherstellen
 - Aufgaben des ausgewählten Projekts nach Containern gruppiert anzeigen
-- Container für ein Projekt erstellen und Aufgaben zu einem Container hinzufügen
-- Aufgaben mit Titel, Beschreibung, Status und optionaler Frist erstellen und bearbeiten
-- Gruppen einer Aufgabe laden sowie zuweisen oder entfernen
+- Container für ein Projekt erstellen und Aufgaben zu einem Container hinzufügen;
+  Container werden nach ID sortiert, neue Container erscheinen rechts
+- Ein einheitlicher Aufgaben-Dialog zum Erstellen und Bearbeiten mit Titel,
+  Beschreibung, Status (`open`, `in_progress`, `done`) und optionaler Frist
+- Standardstatus neuer Aufgaben ist `open`; ein leerer Status wird als „Offen“ angezeigt
+- Gruppen einer Aufgabe per Dropdown zuweisen oder entfernen; bei neuen Aufgaben
+  wird die Auswahl vorgemerkt und nach dem Erstellen übernommen
+- Neue Gruppen direkt aus dem Aufgaben-Dialog mit Name und Mitgliederauswahl anlegen
+- Persönliche Gruppen werden mit dem Benutzernamen statt „Personal user {id}“ angezeigt
 - Datei-Anhänge für Aufgaben auswählen, hochladen und anzeigen
 - Upload-Dateien vor dem Senden nach Endung, Größe und Binärinhalt prüfen
 - Profilbilder sicher hochladen und nach einem App-Neustart wieder anzeigen
@@ -39,7 +45,7 @@ Benutzer
 
 ```text
 lib/
-  ├── core/
+├── core/
 │   ├── api/       HTTP-Client, Endpunkte und API-Fehler
 │   ├── files/     Wiederverwendbare Datei- und Inhaltsprüfung
 │   ├── routing/   Routen und Navigation
@@ -48,11 +54,26 @@ lib/
 │   ├── auth/      Auth-Gate, Startscreen, Login, Registrierung und Repository
 │   ├── home/      Home-Screen, Sidebar und Projektübersicht
 │   ├── projects/  Projektmodell, Repository, lokaler Store, Controller und Liste
-│   ├── user/      Benutzermodell, Profilzustand und Profilbild-Upload
+│   ├── settings/  Einstellungsdialog
+│   ├── user/      Benutzermodelle (inkl. GroupUser), Profilzustand und Profilbild-Upload
 │   └── tasks/     Aufgaben-, Container- und Gruppenmodelle, Repositories,
-│                  Controller, Container-Ansicht und Dialoge
+│                  Controller, Container-Ansicht, TaskDialog und CreateGroupDialog
 └── main.dart      Einstiegspunkt und Auto-Login-Prüfung
 ```
+
+## Aufgaben und Gruppen
+
+`showTaskDialog` in `lib/features/tasks/presentation/task_dialog.dart` ist die
+gemeinsame Maske für neue und bestehende Aufgaben (ersetzt die früheren
+`task_create_dialog.dart` und `task_detail_dialog.dart`). Beim Bearbeiten
+werden Gruppenänderungen sofort über die API übernommen; beim Erstellen werden
+sie gesammelt und nach dem Anlegen der Aufgabe zugewiesen.
+
+Über `CreateGroupDialog` lässt sich eine neue Gruppe anlegen. Dafür lädt die App
+die Benutzer über `GET /api/users` und sendet `POST /api/groups` mit `name` und
+`user_ids`. Persönliche Gruppen erkennt das Frontend an `personal_user_id`
+(Fallback: Name „Personal user {id}“) und zeigt `personal_user_name` als
+Anzeigenamen an. Gruppenlisten werden nach diesem Anzeigenamen sortiert.
 
 ## Sicherheit
 
