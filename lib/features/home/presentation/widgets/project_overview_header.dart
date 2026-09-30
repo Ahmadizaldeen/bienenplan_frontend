@@ -15,23 +15,28 @@ class ProjectOverviewHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Projektübersicht',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final titleSize = constraints.maxWidth < 320 ? 22.0 : 28.0;
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Projektübersicht',
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              IconButton(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh, color: AppColors.accent),
-              ),
-            ],
+                  IconButton(
+                    onPressed: onRefresh,
+                    icon: const Icon(Icons.refresh, color: AppColors.accent),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
@@ -47,26 +52,41 @@ class ProjectOverviewHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _MiniStatCard(
-                label: 'Aktiv',
-                value: '18',
-                color: AppColors.primary,
-              ),
-              _MiniStatCard(
-                label: 'Erledigt',
-                value: '42',
-                color: AppColors.accent,
-              ),
-              _MiniStatCard(
-                label: 'Heute',
-                value: '06',
-                color: AppColors.textTertiary,
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 400;
+              final cardWidth = compact
+                  ? (constraints.maxWidth - 2 * AppSpacing.sm) / 3
+                  : 120.0;
+
+              return Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  _MiniStatCard(
+                    label: 'Aktiv',
+                    value: '18',
+                    color: AppColors.primary,
+                    width: cardWidth,
+                    compact: compact,
+                  ),
+                  _MiniStatCard(
+                    label: 'Erledigt',
+                    value: '42',
+                    color: AppColors.accent,
+                    width: cardWidth,
+                    compact: compact,
+                  ),
+                  _MiniStatCard(
+                    label: 'Heute',
+                    value: '06',
+                    color: AppColors.textTertiary,
+                    width: cardWidth,
+                    compact: compact,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -79,17 +99,21 @@ class _MiniStatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    required this.width,
+    required this.compact,
   });
 
   final String label;
   final String value;
   final Color color;
+  final double width;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 120,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      width: width,
+      padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.42),
         borderRadius: BorderRadius.circular(AppRadius.sm),
