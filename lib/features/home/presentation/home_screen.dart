@@ -80,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 900;
+              final isNarrowPhone = constraints.maxWidth < 600;
 
               final sidebar = UserProfileSidebar(
                 onLogout: widget.onLogout,
@@ -90,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 taskController: _taskController,
                 projectController: _projectController,
                 onRefresh: _refreshAll,
+                leading: isNarrowPhone ? sidebar : null,
               );
 
               if (isWide) {
@@ -114,14 +116,18 @@ class _HomeScreenState extends State<HomeScreen> {
               }
 
               return Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  children: [
-                    sidebar,
-                    const SizedBox(height: AppSpacing.md),
-                    Expanded(child: content),
-                  ],
+                padding: EdgeInsets.all(
+                  isNarrowPhone ? AppSpacing.sm : AppSpacing.md,
                 ),
+                child: isNarrowPhone
+                    ? content
+                    : Column(
+                        children: [
+                          sidebar,
+                          const SizedBox(height: AppSpacing.md),
+                          Expanded(child: content),
+                        ],
+                      ),
               );
             },
           ),
@@ -136,11 +142,13 @@ class _HomeContent extends StatelessWidget {
     required this.taskController,
     required this.projectController,
     required this.onRefresh,
+    this.leading,
   });
 
   final TaskController taskController;
   final ProjectController projectController;
   final Future<void> Function() onRefresh;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +160,10 @@ class _HomeContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(height: AppSpacing.md),
+            ],
             ProjectOverviewHeader(onRefresh: onRefresh),
             const SizedBox(height: AppSpacing.md),
             AnimatedBuilder(
