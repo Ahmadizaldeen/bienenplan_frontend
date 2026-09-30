@@ -16,8 +16,11 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Aufgaben des ausgewählten Projekts nach Containern gruppiert anzeigen
 - Container für ein Projekt erstellen und Aufgaben zu einem Container hinzufügen;
   Container werden nach ID sortiert, neue Container erscheinen rechts
-- Ein einheitlicher Aufgaben-Dialog zum Erstellen und Bearbeiten mit Titel,
-  Beschreibung, Status (`open`, `in_progress`, `done`) und optionaler Frist
+- Ein einheitlicher Aufgaben-Dialog zum Erstellen und Bearbeiten mit einem
+  freien Textfeld (Titel und Beschreibung werden automatisch abgeleitet),
+  Status (`open`, `in_progress`, `done`) und optionaler Frist
+- Aufgabenkarten zeigen den Titel in der ersten Zeile und darunter die
+  Beschreibung, ohne den Titel zu wiederholen
 - Aufgaben im Bearbeitungsdialog nach einer Bestätigung löschen
 - Standardstatus neuer Aufgaben ist `open`; ein leerer Status wird als „Offen“ angezeigt
 - Gruppen einer Aufgabe per Dropdown zuweisen oder entfernen; bei neuen Aufgaben
@@ -71,6 +74,26 @@ gemeinsame Maske für neue und bestehende Aufgaben (ersetzt die früheren
 werden Gruppenänderungen sofort über die API übernommen; beim Erstellen werden
 sie gesammelt und nach dem Anlegen der Aufgabe zugewiesen.
 Bestehende Aufgaben lassen sich aus dem Dialog nach einer Bestätigung löschen.
+
+### Freitext → Titel und Beschreibung
+
+Der Dialog hat nur ein Textfeld „Aufgabe“. Die reinen Funktionen in
+`lib/features/tasks/application/task_text_parser.dart` übernehmen die Aufteilung:
+
+- `parseTaskText`: Text wird getrimmt, `\r\n` zu `\n` normalisiert.
+  - Titel = erste Zeile, maximal 85 Zeichen (`taskTitleMaxLength`).
+  - Beschreibung = `null`, wenn der Text einzeilig und höchstens 85 Zeichen lang ist;
+    sonst der komplette getrimmte Text. Das Frontend sendet dann `''`.
+  - Leerer Text ergibt `null`; das Formular zeigt eine Validierungsmeldung.
+- `composeTaskText`: baut beim Bearbeiten aus Titel und Beschreibung wieder den
+  Freitext zusammen (auch für ältere Aufgaben, deren Beschreibung nicht mit dem
+  Titel beginnt).
+- `taskDescriptionBody`: entfernt für die Anzeige den am Anfang wiederholten Titel.
+
+Hinweise: Die Länge zählt UTF-16-Einheiten; ein Emoji wird beim Kürzen nicht
+halbiert, zusammengesetzte Emojis können aber getrennt werden. 85 Einheiten passen
+sicher in `VARCHAR(100)`. Ältere Aufgaben erhalten beim ersten Speichern den Titel
+zusätzlich am Anfang der Beschreibung.
 
 Über `CreateGroupDialog` lässt sich eine neue Gruppe anlegen. Dafür lädt die App
 die Benutzer über `GET /api/users` und sendet `POST /api/groups` mit `name` und
