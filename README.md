@@ -18,6 +18,7 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
   Container werden nach ID sortiert, neue Container erscheinen rechts
 - Ein einheitlicher Aufgaben-Dialog zum Erstellen und Bearbeiten mit Titel,
   Beschreibung, Status (`open`, `in_progress`, `done`) und optionaler Frist
+- Aufgaben im Bearbeitungsdialog nach einer Bestätigung löschen
 - Standardstatus neuer Aufgaben ist `open`; ein leerer Status wird als „Offen“ angezeigt
 - Gruppen einer Aufgabe per Dropdown zuweisen oder entfernen; bei neuen Aufgaben
   wird die Auswahl vorgemerkt und nach dem Erstellen übernommen
@@ -28,6 +29,7 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Profilbilder sicher hochladen und nach einem App-Neustart wieder anzeigen
 - API-Client mit GET, POST, PUT, DELETE und Multipart-Upload
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
+- Responsive Darstellung der Home- und Aufgabenansicht für schmale Smartphone-Displays
 
 ## Domänenmodell
 
@@ -68,6 +70,7 @@ gemeinsame Maske für neue und bestehende Aufgaben (ersetzt die früheren
 `task_create_dialog.dart` und `task_detail_dialog.dart`). Beim Bearbeiten
 werden Gruppenänderungen sofort über die API übernommen; beim Erstellen werden
 sie gesammelt und nach dem Anlegen der Aufgabe zugewiesen.
+Bestehende Aufgaben lassen sich aus dem Dialog nach einer Bestätigung löschen.
 
 Über `CreateGroupDialog` lässt sich eine neue Gruppe anlegen. Dafür lädt die App
 die Benutzer über `GET /api/users` und sendet `POST /api/groups` mit `name` und
@@ -97,9 +100,9 @@ nächsten Start über den vom Backend gelieferten Pfad geladen.
 
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
 - Teilaufgaben und Kommentare zu Aufgaben unterstützen
-- Aufgaben und Container bearbeiten oder löschen
+- Container bearbeiten oder löschen
 - Gruppenberechtigungen, Rollen und Zugriffsrechte in der Oberfläche abbilden
-- Responsive Darstellung für Web, Desktop und mobile Geräte weiter verfeinern
+- Responsive Darstellung für Web und Desktop weiter verfeinern
 - Konfigurierbare Backend-URL für Entwicklungs- und Produktionsumgebungen
 
 ## Voraussetzungen
