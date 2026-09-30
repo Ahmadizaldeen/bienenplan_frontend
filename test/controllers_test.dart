@@ -59,6 +59,7 @@ class ExceptionAuthRepository implements AuthRepositoryContract {
 class FakeTaskRepository implements TaskRepositoryContract {
   bool loadCalled = false;
   bool updateCalled = false;
+  bool deleteCalled = false;
 
   @override
   Future<List<Task>> fetchTasks() async {
@@ -87,6 +88,11 @@ class FakeTaskRepository implements TaskRepositoryContract {
   @override
   Future<Task> fetchTaskDetail(int taskId) async =>
       await fetchTasks().then((tasks) => tasks.first);
+
+  @override
+  Future<void> deleteTask(int taskId) async {
+    deleteCalled = true;
+  }
 
   @override
   Future<void> updateTask(
@@ -143,6 +149,11 @@ class _CreateAwareTaskRepository implements TaskRepositoryContract {
 
   @override
   Future<Task> fetchTaskDetail(int taskId) async => _tasks.first;
+
+  @override
+  Future<void> deleteTask(int taskId) async {
+    _tasks.removeWhere((task) => task.id == taskId);
+  }
 
   @override
   Future<void> updateTask(
@@ -350,9 +361,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: TaskListScreen(controller: controller),
-        ),
+        home: Scaffold(body: TaskListScreen(controller: controller)),
       ),
     );
 
@@ -383,6 +392,21 @@ void main() {
     expect(controller.tasks.length, 2);
     expect(controller.tasks.any((t) => t.title == 'Neue Aufgabe'), isTrue);
     expect(controller.isLoading, isFalse);
+    expect(controller.errorMessage, isNull);
+  });
+
+  test('TaskController deletes a task and reloads the task list', () async {
+    final repository = _CreateAwareTaskRepository();
+    final controller = TaskController(
+      taskRepository: repository,
+      containerRepository: FakeContainerRepository(),
+    );
+    await controller.loadTasks();
+
+    final success = await controller.deleteTask(1);
+
+    expect(success, isTrue);
+    expect(controller.tasks, isEmpty);
     expect(controller.errorMessage, isNull);
   });
 

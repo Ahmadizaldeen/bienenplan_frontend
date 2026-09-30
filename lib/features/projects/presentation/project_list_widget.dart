@@ -221,6 +221,8 @@ class _ProjectTile extends StatelessWidget {
             Expanded(
               child: Text(
                 project.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,

@@ -80,6 +80,8 @@ class UserProfileSidebar extends StatelessWidget {
                                 children: [
                                   Text(
                                     userName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 20,
@@ -89,6 +91,8 @@ class UserProfileSidebar extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Text(
                                     userEmail,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color: AppColors.textSecondary,
@@ -103,6 +107,8 @@ class UserProfileSidebar extends StatelessWidget {
                             children: [
                               Text(
                                 '...',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
@@ -112,6 +118,8 @@ class UserProfileSidebar extends StatelessWidget {
                               SizedBox(height: 4),
                               Text(
                                 '...@example.com',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                 ),

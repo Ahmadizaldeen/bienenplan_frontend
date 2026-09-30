@@ -7,6 +7,7 @@ import 'task_model.dart';
 abstract class TaskRepositoryContract {
   Future<List<Task>> fetchTasks();
   Future<Task> fetchTaskDetail(int taskId);
+  Future<void> deleteTask(int taskId);
   Future<void> updateTaskStatus(int taskId, String newStatus);
   Future<void> updateTask(
     int taskId, {
@@ -64,6 +65,11 @@ class TaskRepository implements TaskRepositoryContract {
       return Task.fromJson(response);
     }
     throw Exception('Ungültiges Datenformat von API empfangen.');
+  }
+
+  @override
+  Future<void> deleteTask(int taskId) async {
+    await _apiClient.delete(ApiEndpoints.taskDetail(taskId));
   }
 
   @override
