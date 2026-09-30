@@ -72,6 +72,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   bool _isLoadingGroups = true;
   bool _isCreatingGroup = false;
   bool _isSaving = false;
+  bool _isDeleting = false;
   bool _isUploading = false;
   bool _changed = false;
   String? _error;
@@ -391,6 +392,50 @@ class _TaskDialogState extends State<_TaskDialog> {
     if (mounted) Navigator.of(context).pop(true);
   }
 
+  Future<void> _deleteTask() async {
+    final task = widget.task;
+    if (task == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (confirmationContext) => AlertDialog(
+        title: const Text('Aufgabe löschen?'),
+        content: Text(
+          '„${task.title}“ wird gelöscht und ist danach nicht mehr sichtbar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(confirmationContext).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(confirmationContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _isDeleting = true;
+      _error = null;
+    });
+    final success = await widget.controller.deleteTask(task.id);
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    setState(() {
+      _isDeleting = false;
+      _error = widget.controller.errorMessage;
+    });
+  }
+
   String get _deadlineLabel {
     if (_deadline == null) return 'Keine Frist ausgewählt';
     return '${_deadline!.day.toString().padLeft(2, '0')}.'
@@ -438,6 +483,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   initialValue: _status,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Status'),
                   items: _statusOptions.entries
                       .map(
@@ -476,12 +522,16 @@ class _TaskDialogState extends State<_TaskDialog> {
                         DropdownButtonFormField<Group>(
                           key: ValueKey(selectedGroupIds.join(',')),
                           initialValue: null,
+                          isExpanded: true,
                           hint: const Text('Gruppe auswählen'),
                           items: availableGroups
                               .map(
                                 (group) => DropdownMenuItem<Group>(
                                   value: group,
-                                  child: Text(group.label),
+                                  child: Text(
+                                    group.label,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -545,23 +595,39 @@ class _TaskDialogState extends State<_TaskDialog> {
                     ],
                   ),
                 const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(child: Text(_deadlineLabel)),
-                    TextButton.icon(
-                      onPressed: _isSaving ? null : _pickDeadline,
-                      icon: const Icon(Icons.event),
-                      label: const Text('Frist wählen'),
-                    ),
-                    if (_deadline != null)
-                      IconButton(
-                        tooltip: 'Frist entfernen',
-                        onPressed: _isSaving
-                            ? null
-                            : () => setState(() => _deadline = null),
-                        icon: const Icon(Icons.clear),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final controls = [
+                      TextButton.icon(
+                        onPressed: _isSaving ? null : _pickDeadline,
+                        icon: const Icon(Icons.event),
+                        label: const Text('Frist wählen'),
                       ),
-                  ],
+                      if (_deadline != null)
+                        IconButton(
+                          tooltip: 'Frist entfernen',
+                          onPressed: _isSaving
+                              ? null
+                              : () => setState(() => _deadline = null),
+                          icon: const Icon(Icons.clear),
+                        ),
+                    ];
+                    if (constraints.maxWidth < 350) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_deadlineLabel),
+                          Wrap(children: controls),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: Text(_deadlineLabel)),
+                        ...controls,
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text('Anhang', style: Theme.of(context).textTheme.titleSmall),
@@ -621,8 +687,23 @@ class _TaskDialogState extends State<_TaskDialog> {
         ),
       ),
       actions: [
+        if (_isEditing)
+          TextButton.icon(
+            onPressed: _isSaving || _isUploading || _isDeleting
+                ? null
+                : _deleteTask,
+            icon: _isDeleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.delete_outline),
+            label: const Text('Löschen'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+          ),
         TextButton(
-          onPressed: _isSaving || _isUploading
+          onPressed: _isSaving || _isUploading || _isDeleting
               ? null
               : () =>
                     Navigator.of(context)
@@ -630,7 +711,7 @@ class _TaskDialogState extends State<_TaskDialog> {
           child: Text(_isEditing ? 'Schließen' : 'Abbrechen'),
         ),
         ElevatedButton(
-          onPressed: _isSaving || _isUploading ? null : _submit,
+          onPressed: _isSaving || _isUploading || _isDeleting ? null : _submit,
           child: _isSaving
               ? const SizedBox(
                   width: 18,
