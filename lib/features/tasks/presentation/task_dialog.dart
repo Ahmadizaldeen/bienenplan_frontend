@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../application/task_controller.dart';
+import '../application/task_text_parser.dart';
 import '../data/group_model.dart';
 import '../data/task_model.dart';
 import '../../../core/api/api_endpoints.dart';
@@ -63,8 +64,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   };
 
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
+  late final TextEditingController _textController;
   late final TextEditingController _attachmentController;
   late String _status;
   DateTime? _deadline;
@@ -90,9 +90,8 @@ class _TaskDialogState extends State<_TaskDialog> {
   void initState() {
     super.initState();
     final task = widget.task;
-    _titleController = TextEditingController(text: task?.title ?? '');
-    _descriptionController = TextEditingController(
-      text: task?.description ?? '',
+    _textController = TextEditingController(
+      text: task == null ? '' : composeTaskText(task.title, task.description),
     );
     _attachmentController = TextEditingController(text: task?.attachment ?? '');
     _status = _statusOptions.containsKey(task?.status) ? task!.status : 'open';
@@ -103,8 +102,7 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
+    _textController.dispose();
     _attachmentController.dispose();
     super.dispose();
   }
@@ -330,6 +328,8 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final parsed = parseTaskText(_textController.text);
+    if (parsed == null) return;
 
     setState(() {
       _isSaving = true;
@@ -340,8 +340,8 @@ class _TaskDialogState extends State<_TaskDialog> {
     if (taskId == null) {
       final createdTaskId = await widget.controller.createTaskWithId(
         containerId: widget.containerId,
-        title: _titleController.text,
-        description: _descriptionController.text,
+        title: parsed.title,
+        description: parsed.description ?? '',
         status: _status,
         deadline: _deadline?.toIso8601String(),
         attachment: _queuedFileBytes == null
@@ -369,8 +369,8 @@ class _TaskDialogState extends State<_TaskDialog> {
 
     final success = await widget.controller.updateTask(
       taskId,
-      title: _titleController.text,
-      description: _descriptionController.text,
+      title: parsed.title,
+      description: parsed.description ?? '',
       status: _status,
       deadline: _deadline?.toIso8601String(),
       attachment: _attachmentController.text.trim(),
@@ -459,26 +459,26 @@ class _TaskDialogState extends State<_TaskDialog> {
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
+            // Platz für das schwebende Label, sonst schneidet der Scrollbereich es ab.
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFormField(
-                  controller: _titleController,
+                  controller: _textController,
                   autofocus: !_isEditing,
-                  decoration: const InputDecoration(labelText: 'Titel'),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Bitte einen Titel angeben.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Beschreibung'),
+                  keyboardType: TextInputType.multiline,
+                  minLines: 3,
+                  maxLines: 10,
+                  decoration: const InputDecoration(
+                    labelText: 'Aufgabe',
+                    helperText: 'Die erste Zeile wird zum Titel.',
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) => parseTaskText(value ?? '') == null
+                      ? 'Beschreibe die Aufgabe.'
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
