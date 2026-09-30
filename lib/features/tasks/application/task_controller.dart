@@ -82,6 +82,15 @@ class TaskController extends ChangeNotifier {
     return _guard<Task?>(() => _taskRepository.fetchTaskDetail(taskId), null);
   }
 
+  Future<bool> deleteTask(int taskId) {
+    _errorMessage = null;
+    return _guard(() async {
+      await _taskRepository.deleteTask(taskId);
+      await loadTasks();
+      return true;
+    }, false);
+  }
+
   Future<bool> updateTask(
     int taskId, {
     required String title,
