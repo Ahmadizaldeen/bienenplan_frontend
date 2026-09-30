@@ -41,6 +41,9 @@ class _FakeTaskRepo implements TaskRepositoryContract {
   Future<Task> fetchTaskDetail(int taskId) async => (await fetchTasks()).first;
 
   @override
+  Future<void> deleteTask(int taskId) async {}
+
+  @override
   Future<void> updateTask(
     int taskId, {
     required String title,

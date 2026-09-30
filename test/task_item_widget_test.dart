@@ -36,15 +36,36 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: TaskItemWidget(
-            task: createTask(''),
-            showContainerBadge: false,
-          ),
+          body: TaskItemWidget(task: createTask(''), showContainerBadge: false),
         ),
       ),
     );
 
     expect(find.text('Offen'), findsOneWidget);
+  });
+
+  testWidgets('shows task title and status without overflow on a narrow card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: TaskItemWidget(task: createTask('in_progress')),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Testaufgabe'), findsOneWidget);
+    expect(find.text('In Bearbeitung'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   test('defaults a blank API status to open', () {
