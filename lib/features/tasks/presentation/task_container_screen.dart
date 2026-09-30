@@ -164,8 +164,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
     if (!mounted) return;
     if (changed) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Aufgabe aktualisiert.')));
+      final wasDeleted = !_controller.tasks.any(
+        (currentTask) => currentTask.id == task.id,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            wasDeleted
+                ? 'Aufgabe erfolgreich gelöscht.'
+                : 'Aufgabe aktualisiert.',
+          ),
+        ),
+      );
     }
   }
 
@@ -282,113 +292,139 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
     final containerIds = grouped.keys.toList()..sort();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final containerId in containerIds)
-            Container(
-              width: 320,
-              margin: const EdgeInsets.only(right: AppSpacing.md),
-              child: GlassContainer(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            containerTitles[containerId] ?? '',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceWhiteSoft.withValues(
-                              alpha: 0.25,
-                            ),
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: Text(
-                            '${grouped[containerId]!.length}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
+    Widget buildContainer(int containerId, {required bool compact}) {
+      return SizedBox(
+        width: compact ? double.infinity : 320,
+        child: GlassContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      containerTitles[containerId] ?? '',
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Divider(height: 1),
-                    const SizedBox(height: AppSpacing.sm),
-                    if (grouped[containerId]!.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                        child: Center(
-                          child: Text(
-                            'Keine Aufgaben in diesem Container',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        ),
-                      )
-                    else ...[
-                      for (final task in grouped[containerId]!)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: TaskItemWidget(
-                            task: task,
-                            onStatusChanged: () => _refreshTasks(),
-                            onTap: () => _showTaskDetailDialog(task),
-                            showContainerBadge: false,
-                          ),
-                        ),
-                    ],
-                    const SizedBox(height: AppSpacing.xs),
-                    TextButton.icon(
-                      onPressed: () => _showCreateTaskDialog(containerId),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Aufgabe hinzufügen'),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
                     ),
-                  ],
-                ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Text(
+                      '${grouped[containerId]!.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.sm),
+              if (grouped[containerId]!.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: Text(
+                      'Keine Aufgaben in diesem Container',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                for (final task in grouped[containerId]!)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: TaskItemWidget(
+                      task: task,
+                      onStatusChanged: () => _refreshTasks(),
+                      onTap: () => _showTaskDetailDialog(task),
+                      showContainerBadge: false,
+                    ),
+                  ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              TextButton.icon(
+                onPressed: () => _showCreateTaskDialog(containerId),
+                icon: const Icon(Icons.add),
+                label: const Text('Aufgabe hinzufügen'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget buildAddContainerButton({required bool compact}) {
+      return SizedBox(
+        width: compact ? double.infinity : 220,
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
             ),
-          SizedBox(
-            width: 220,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.primary
-                      .withValues(alpha: 0.5),
-                  width: 1.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-              ),
-              onPressed: _showCreateContainerDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Neuer Container'),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.primary
+                  .withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
-        ],
-      ),
+          onPressed: _showCreateContainerDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Neuer Container'),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final containerId in containerIds) ...[
+                  buildContainer(containerId, compact: true),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                buildAddContainerButton(compact: true),
+              ],
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final containerId in containerIds) ...[
+                buildContainer(containerId, compact: false),
+                const SizedBox(width: AppSpacing.md),
+              ],
+              buildAddContainerButton(compact: false),
+            ],
+          ),
+        );
+      },
     );
   }
 }
