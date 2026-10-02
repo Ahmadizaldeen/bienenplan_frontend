@@ -108,6 +108,43 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  Future<dynamic> postMultipartFiles(
+    String url,
+    List<({String name, Uint8List bytes})> files,
+  ) async {
+    final token = await getToken();
+    final request = http.MultipartRequest('POST', Uri.parse(url))
+      ..headers.addAll({
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
+    for (final file in files) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'files[]',
+          file.bytes,
+          filename: file.name,
+        ),
+      );
+    }
+    return _handleResponse(
+      await http.Response.fromStream(await request.send()),
+    );
+  }
+
+  Future<Uint8List> getBytes(String url) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.bodyBytes;
+    }
+    _handleResponse(response);
+    throw StateError('Download ohne Daten');
+  }
+
   // Response Handler
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {

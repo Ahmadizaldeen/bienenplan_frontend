@@ -59,3 +59,5 @@ lib/features/auth/presentation/start_screen.dart
 .vs/bienenplan_frontend/v18/.wsuo
 DECISIONS.md
 .vscode/settings.json
+test/task_dialog_test.dart
+test/task_dialog_test.dart

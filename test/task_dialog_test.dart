@@ -67,6 +67,9 @@ void main() {
 
     await tester.tap(find.text('Dialog öffnen'));
     await tester.pumpAndSettle();
+    expect(find.text('Anhänge'), findsOneWidget);
+    expect(find.text('Noch keine Dateien hochgeladen'), findsOneWidget);
+    expect(find.text('Anhang (URL/Dateiname, optional)'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.ensureVisible(find.text('Frist wählen'));
     await tester.pumpAndSettle();

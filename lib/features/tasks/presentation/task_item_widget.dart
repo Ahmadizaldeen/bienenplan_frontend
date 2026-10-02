@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../application/task_text_parser.dart';
 import '../data/task_model.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -48,6 +49,7 @@ class TaskItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(task.status);
+    final descriptionBody = taskDescriptionBody(task.title, task.description);
     final statusBadge = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -105,21 +107,22 @@ class TaskItemWidget extends StatelessWidget {
                   ],
                   Text(
                     task.title,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 2),
-                  if (task.description.trim().isNotEmpty)
+                  if (descriptionBody.isNotEmpty) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      task.description,
-                      maxLines: 1,
+                      descriptionBody,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
+                  ],
                 ],
               );
               if (stacked) {

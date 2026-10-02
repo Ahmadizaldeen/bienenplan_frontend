@@ -4,9 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../application/task_controller.dart';
+import '../application/task_text_parser.dart';
 import '../data/group_model.dart';
 import '../data/task_model.dart';
-import '../../../core/api/api_endpoints.dart';
+import '../data/task_attachment.dart';
 import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'create_group_dialog.dart';
@@ -63,9 +64,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   };
 
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
-  late final TextEditingController _attachmentController;
+  late final TextEditingController _textController;
   late String _status;
   DateTime? _deadline;
 
@@ -80,8 +79,8 @@ class _TaskDialogState extends State<_TaskDialog> {
   List<Group> _allGroups = const [];
   late final Set<int> _assignedGroupIds;
   int? _createdTaskId;
-  Uint8List? _queuedFileBytes;
-  String? _queuedFileName;
+  List<({String name, Uint8List bytes})> _queuedFiles = [];
+  List<TaskAttachment> _attachments = [];
 
   bool get _isEditing => widget.task != null;
   int? get _taskId => widget.task?.id ?? _createdTaskId;
@@ -90,22 +89,19 @@ class _TaskDialogState extends State<_TaskDialog> {
   void initState() {
     super.initState();
     final task = widget.task;
-    _titleController = TextEditingController(text: task?.title ?? '');
-    _descriptionController = TextEditingController(
-      text: task?.description ?? '',
+    _textController = TextEditingController(
+      text: task == null ? '' : composeTaskText(task.title, task.description),
     );
-    _attachmentController = TextEditingController(text: task?.attachment ?? '');
     _status = _statusOptions.containsKey(task?.status) ? task!.status : 'open';
     _deadline = task?.deadlineDateTime;
     _assignedGroupIds = task?.groupIds.toSet() ?? {};
     _loadGroups();
+    if (task != null) _loadAttachments(task.id);
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _attachmentController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -269,67 +265,124 @@ class _TaskDialogState extends State<_TaskDialog> {
     );
     if (files.isEmpty) return;
 
-    final file = files.single;
-    final bytes = await file.readAsBytes();
-    if (!mounted) return;
-
-    final validationError = FileValidationService.validate(
-      bytes,
-      file.name,
-      allowedExtensions: _allowedExtensions,
-    );
-    if (validationError != null) {
-      setState(() => _error = validationError);
-      return;
+    final selected = <({String name, Uint8List bytes})>[];
+    for (final file in files) {
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      final error = FileValidationService.validate(
+        bytes,
+        file.name,
+        allowedExtensions: _allowedExtensions,
+      );
+      if (error != null) {
+        setState(() => _error = '${file.name}: $error');
+        return;
+      }
+      selected.add((name: file.name, bytes: bytes));
     }
 
     final taskId = _taskId;
-    if (taskId == null) {
-      setState(() {
-        _queuedFileBytes = bytes;
-        _queuedFileName = file.name;
-        _error = null;
-      });
-      return;
-    }
-
     setState(() {
-      _queuedFileBytes = bytes;
-      _queuedFileName = file.name;
+      _queuedFiles.addAll(selected);
       _error = null;
     });
-    await _uploadQueuedFile(taskId);
+    if (taskId != null) await _uploadQueuedFiles(taskId);
   }
 
-  Future<bool> _uploadQueuedFile(int taskId) async {
-    final bytes = _queuedFileBytes;
-    final fileName = _queuedFileName;
-    if (bytes == null || fileName == null) return true;
+  Future<void> _loadAttachments(int taskId) async {
+    try {
+      final attachments = await widget.controller.listAttachments(taskId);
+      if (!mounted) return;
+      setState(() => _attachments = attachments);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    }
+  }
 
+  Future<bool> _uploadQueuedFiles(int taskId) async {
+    if (_queuedFiles.isEmpty) return true;
     setState(() => _isUploading = true);
-    final attachment = await widget.controller.uploadTaskAttachment(
-      taskId,
-      bytes,
-      fileName,
-    );
-    if (!mounted) return false;
-
-    setState(() {
-      _isUploading = false;
-      if (attachment != null) {
-        _attachmentController.text = attachment;
-        _queuedFileBytes = null;
-        _queuedFileName = null;
+    try {
+      final uploaded = await widget.controller.uploadAttachments(
+        taskId,
+        _queuedFiles,
+      );
+      if (!mounted) return false;
+      setState(() {
+        _isUploading = false;
+        _attachments.addAll(uploaded);
+        _queuedFiles = [];
         _changed = true;
-      } else {
-        _error = widget.controller.errorMessage;
-      }
-    });
-    return attachment != null;
+      });
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      setState(() {
+        _isUploading = false;
+        _error = error.toString();
+      });
+      return false;
+    }
+  }
+
+  Future<void> _downloadAttachment(TaskAttachment attachment) async {
+    final taskId = _taskId;
+    if (taskId == null) return;
+    try {
+      final bytes = await widget.controller.downloadAttachment(
+        taskId,
+        attachment.id,
+      );
+      if (!mounted) return;
+      await FilePicker.saveFile(
+        fileName: attachment.originalName,
+        bytes: bytes,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    }
+  }
+
+  Future<void> _deleteAttachment(TaskAttachment attachment) async {
+    final taskId = _taskId;
+    if (taskId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Anhang löschen?'),
+        content: Text('„${attachment.originalName}“ löschen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.controller.deleteAttachment(taskId, attachment.id);
+      if (!mounted) return;
+      setState(() {
+        _attachments.removeWhere((item) => item.id == attachment.id);
+        _changed = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    }
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final parsed = parseTaskText(_textController.text);
+    if (parsed == null) return;
 
     setState(() {
       _isSaving = true;
@@ -340,13 +393,10 @@ class _TaskDialogState extends State<_TaskDialog> {
     if (taskId == null) {
       final createdTaskId = await widget.controller.createTaskWithId(
         containerId: widget.containerId,
-        title: _titleController.text,
-        description: _descriptionController.text,
+        title: parsed.title,
+        description: parsed.description ?? '',
         status: _status,
         deadline: _deadline?.toIso8601String(),
-        attachment: _queuedFileBytes == null
-            ? _attachmentController.text.trim()
-            : null,
         groupIds: _assignedGroupIds,
       );
       if (!mounted) return;
@@ -359,7 +409,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       }
       _createdTaskId = createdTaskId;
       _changed = true;
-      if (!await _uploadQueuedFile(createdTaskId)) {
+      if (!await _uploadQueuedFiles(createdTaskId)) {
         if (mounted) setState(() => _isSaving = false);
         return;
       }
@@ -369,11 +419,10 @@ class _TaskDialogState extends State<_TaskDialog> {
 
     final success = await widget.controller.updateTask(
       taskId,
-      title: _titleController.text,
-      description: _descriptionController.text,
+      title: parsed.title,
+      description: parsed.description ?? '',
       status: _status,
       deadline: _deadline?.toIso8601String(),
-      attachment: _attachmentController.text.trim(),
     );
 
     if (!mounted) return;
@@ -385,7 +434,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       return;
     }
 
-    if (!await _uploadQueuedFile(taskId)) {
+    if (!await _uploadQueuedFiles(taskId)) {
       if (mounted) setState(() => _isSaving = false);
       return;
     }
@@ -459,26 +508,25 @@ class _TaskDialogState extends State<_TaskDialog> {
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
+            // Platz für das schwebende Label, sonst schneidet der Scrollbereich es ab.
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFormField(
-                  controller: _titleController,
+                  controller: _textController,
                   autofocus: !_isEditing,
-                  decoration: const InputDecoration(labelText: 'Titel'),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Bitte einen Titel angeben.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Beschreibung'),
+                  keyboardType: TextInputType.multiline,
+                  minLines: 3,
+                  maxLines: 10,
+                  decoration: const InputDecoration(
+                    labelText: 'Aufgabe',
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) => parseTaskText(value ?? '') == null
+                      ? 'Beschreibe die Aufgabe.'
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
@@ -630,30 +678,58 @@ class _TaskDialogState extends State<_TaskDialog> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Text('Anhang', style: Theme.of(context).textTheme.titleSmall),
+                Text('Anhänge', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.xs),
-                TextFormField(
-                  controller: _attachmentController,
-                  decoration: const InputDecoration(
-                    labelText: 'Anhang (URL/Dateiname, optional)',
+                if (_attachments.isEmpty && _queuedFiles.isEmpty)
+                  const Text('Noch keine Dateien hochgeladen'),
+                for (final attachment in _attachments)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.insert_drive_file_outlined),
+                    title: Text(
+                      attachment.originalName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${(attachment.sizeBytes / 1024).toStringAsFixed(1)} KB',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Herunterladen',
+                          onPressed: () => _downloadAttachment(attachment),
+                          icon: const Icon(Icons.download),
+                        ),
+                        if (attachment.canDelete)
+                          IconButton(
+                            tooltip: 'Anhang löschen',
+                            onPressed: _isUploading
+                                ? null
+                                : () => _deleteAttachment(attachment),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _attachmentController,
-                  builder: (context, value, child) {
-                    final attachment = value.text.trim();
-                    if (attachment.isEmpty) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: Text(
-                        ApiEndpoints.attachmentUrl(attachment),
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppColors.mutedBlack),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  },
-                ),
+                for (final file in _queuedFiles)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      file.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: const Text('Upload ausstehend'),
+                    trailing: IconButton(
+                      tooltip: 'Auswahl entfernen',
+                      onPressed: _isUploading
+                          ? null
+                          : () => setState(() => _queuedFiles.remove(file)),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -667,11 +743,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.upload_file),
-                    label: Text(
-                      _queuedFileName == null
-                          ? 'Datei hochladen'
-                          : 'Ausgewählt: $_queuedFileName',
-                    ),
+                    label: Text('Dateien hinzufügen'),
                   ),
                 ),
                 if (_error != null) ...[

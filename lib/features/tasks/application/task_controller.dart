@@ -4,6 +4,8 @@ import '../data/container_model.dart' as container_model;
 import '../data/task_model.dart';
 import '../data/container_repository.dart';
 import '../data/task_repository.dart';
+import '../data/task_attachment.dart';
+import '../data/task_attachment_repository.dart';
 import '../data/group_model.dart';
 import '../data/group_repository.dart';
 import '../../user/data/user_model.dart';
@@ -13,13 +15,30 @@ class TaskController extends ChangeNotifier {
     TaskRepositoryContract? taskRepository,
     ContainerRepositoryContract? containerRepository,
     GroupRepositoryContract? groupRepository,
+    TaskAttachmentRepository? attachmentRepository,
   }) : _taskRepository = taskRepository ?? TaskRepository(),
        _containerRepository = containerRepository ?? ContainerRepository(),
-       _groupRepository = groupRepository ?? GroupRepository();
+       _groupRepository = groupRepository ?? GroupRepository(),
+       _attachmentRepository = attachmentRepository ?? TaskAttachmentRepository();
 
   final TaskRepositoryContract _taskRepository;
   final ContainerRepositoryContract _containerRepository;
   final GroupRepositoryContract _groupRepository;
+  final TaskAttachmentRepository _attachmentRepository;
+
+  Future<List<TaskAttachment>> listAttachments(int taskId) =>
+      _attachmentRepository.list(taskId);
+
+  Future<List<TaskAttachment>> uploadAttachments(
+    int taskId,
+    List<({String name, Uint8List bytes})> files,
+  ) => _attachmentRepository.upload(taskId, files);
+
+  Future<Uint8List> downloadAttachment(int taskId, int attachmentId) =>
+      _attachmentRepository.download(taskId, attachmentId);
+
+  Future<void> deleteAttachment(int taskId, int attachmentId) =>
+      _attachmentRepository.delete(taskId, attachmentId);
 
   bool _isLoading = false;
   String? _errorMessage;
