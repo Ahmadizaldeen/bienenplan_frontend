@@ -27,7 +27,7 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
   wird die Auswahl vorgemerkt und nach dem Erstellen übernommen
 - Neue Gruppen direkt aus dem Aufgaben-Dialog mit Name und Mitgliederauswahl anlegen
 - Persönliche Gruppen werden mit dem Benutzernamen statt „Personal user {id}“ angezeigt
-- Datei-Anhänge für Aufgaben auswählen, hochladen und anzeigen
+- Mehrere Datei-Anhänge für Aufgaben auswählen, hochladen, in einer Liste anzeigen und authentifiziert herunterladen; nur Uploader oder Projekt-Eigentümer können löschen
 - Upload-Dateien vor dem Senden nach Endung, Größe und Binärinhalt prüfen
 - Profilbilder sicher hochladen und nach einem App-Neustart wieder anzeigen
 - API-Client mit GET, POST, PUT, DELETE und Multipart-Upload
