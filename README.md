@@ -119,6 +119,28 @@ Der Upload erfolgt als Multipart-Anfrage an `POST /api/me/picture`; nach einem
 erfolgreichen Upload wird die Vorschau sofort aktualisiert und das Bild beim
 nächsten Start über den vom Backend gelieferten Pfad geladen.
 
+## Farben und Themes
+
+Die zwoelf Basisfarben stehen ausschliesslich in `AppPalette` in
+[`lib/core/theme/app_theme.dart`](lib/core/theme/app_theme.dart):
+
+| Bereich | Basisfarben |
+| --- | --- |
+| Hell | `lightBackground`, `lightSurface`, `lightText`, `lightMuted` |
+| Dunkel | `darkBackground`, `darkSurface`, `darkText`, `darkMuted` |
+| Akzente und Status | `accent`, `accentLight`, `warning`, `danger` |
+
+Der helle Modus verwendet Off-White, der dunkle Modus neutrales Dunkelgrau.
+Rahmen, Container, Statusfarben und Animationen werden aus diesen Basisfarben
+abgeleitet. Fuer eine neue Farbgestaltung nur diese zwoelf Werte bearbeiten.
+Nach Aenderungen an den `const`-Werten einen Hot Restart ausfuehren.
+
+Widgets verwenden `Theme.of(context).colorScheme` statt eigener Farbwerte.
+`AppColors` bleibt als Kompatibilitaets-API erhalten; neue Widgets verwenden
+die semantischen Rollen wie `surfaceContainer`, `onSurface`, `primary`
+und `error`. Die Theme-Tests pruefen Kontraste und verhindern weitere feste
+Farben ausserhalb der zentralen Palette.
+
 ## Noch offen
 
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
