@@ -24,6 +24,8 @@ class TaskListScreen extends StatefulWidget {
 
 class _TaskListScreenState extends State<TaskListScreen> {
   late final TaskController _controller = widget.controller ?? TaskController();
+  // Container-IDs halten den Klappzustand auch über Widget-Rebuilds hinweg fest.
+  final Set<int> _collapsedContainerIds = {};
 
   @override
   void initState() {
@@ -309,6 +311,24 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
+                  IconButton(
+                    key: ValueKey('container-toggle-$containerId'),
+                    tooltip: _collapsedContainerIds.contains(containerId)
+                        ? 'Container ausklappen'
+                        : 'Container einklappen',
+                    // add() liefert false, wenn der Container bereits eingeklappt war.
+                    onPressed: () => setState(() {
+                      if (!_collapsedContainerIds.add(containerId)) {
+                        _collapsedContainerIds.remove(containerId);
+                      }
+                    }),
+                    icon: Icon(
+                      _collapsedContainerIds.contains(containerId)
+                          ? Icons.expand_more
+                          : Icons.expand_less,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
@@ -331,37 +351,58 @@ class _TaskListScreenState extends State<TaskListScreen> {
               ),
               const SizedBox(height: AppSpacing.sm),
               const Divider(height: 1),
-              const SizedBox(height: AppSpacing.sm),
-              if (grouped[containerId]!.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Center(
-                    child: Text(
-                      'Keine Aufgaben in diesem Container',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textTertiary,
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: _collapsedContainerIds.contains(containerId)
+                    ? const SizedBox.shrink()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: AppSpacing.sm),
+                          if (grouped[containerId]!.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppSpacing.md,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Keine Aufgaben in diesem Container',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            for (final task in grouped[containerId]!)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm,
+                                ),
+                                child: SizedBox(
+                                  key: ValueKey('task-card-${task.id}'),
+                                  width: double.infinity,
+                                  child: TaskItemWidget(
+                                    task: task,
+                                    onStatusChanged: () => _refreshTasks(),
+                                    onTap: () => _showTaskDetailDialog(task),
+                                    showContainerBadge: false,
+                                  ),
+                                ),
+                              ),
+                          ],
+                          const SizedBox(height: AppSpacing.xs),
+                          TextButton.icon(
+                            onPressed: () => _showCreateTaskDialog(containerId),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Aufgabe hinzufügen'),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                )
-              else ...[
-                for (final task in grouped[containerId]!)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: TaskItemWidget(
-                      task: task,
-                      onStatusChanged: () => _refreshTasks(),
-                      onTap: () => _showTaskDetailDialog(task),
-                      showContainerBadge: false,
-                    ),
-                  ),
-              ],
-              const SizedBox(height: AppSpacing.xs),
-              TextButton.icon(
-                onPressed: () => _showCreateTaskDialog(containerId),
-                icon: const Icon(Icons.add),
-                label: const Text('Aufgabe hinzufügen'),
               ),
             ],
           ),
