@@ -11,6 +11,8 @@ import '../data/task_attachment.dart';
 import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'create_group_dialog.dart';
+import '../../subtasks/data/subtask_repository.dart';
+import '../../subtasks/presentation/widgets/subtask_section.dart';
 
 /// Zeigt dieselbe Aufgabenmaske zum Erstellen und Bearbeiten.
 /// Gibt `true` zurück, wenn die Aufgabe erstellt oder geändert wurde.
@@ -19,6 +21,7 @@ Future<bool> showTaskDialog(
   required TaskController controller,
   required int containerId,
   Task? task,
+  SubtaskRepositoryContract? subtaskRepository,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -26,6 +29,7 @@ Future<bool> showTaskDialog(
       controller: controller,
       containerId: containerId,
       task: task,
+      subtaskRepository: subtaskRepository ?? SubtaskRepository(),
     ),
   );
   return result ?? false;
@@ -36,11 +40,13 @@ class _TaskDialog extends StatefulWidget {
     required this.controller,
     required this.containerId,
     this.task,
+    required this.subtaskRepository,
   });
 
   final TaskController controller;
   final int containerId;
   final Task? task;
+  final SubtaskRepositoryContract subtaskRepository;
 
   @override
   State<_TaskDialog> createState() => _TaskDialogState();
@@ -74,6 +80,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   bool _isDeleting = false;
   bool _isUploading = false;
   bool _changed = false;
+  bool _subtasksBusy = false;
   String? _error;
   String? _groupNotice;
   List<Group> _allGroups = const [];
@@ -683,6 +690,16 @@ class _TaskDialogState extends State<_TaskDialog> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
+                SubtaskSection(
+                  taskId: _taskId,
+                  repository: widget.subtaskRepository,
+                  disabled: _isSaving || _isDeleting || _isUploading,
+                  onChanged: () => _changed = true,
+                  onBusyChanged: (busy) {
+                    if (mounted) setState(() => _subtasksBusy = busy);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
                 Text('Anhänge', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.xs),
                 if (_attachments.isEmpty && _queuedFiles.isEmpty)
@@ -768,7 +785,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       actions: [
         if (_isEditing)
           TextButton.icon(
-            onPressed: _isSaving || _isUploading || _isDeleting
+            onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
                 ? null
                 : _deleteTask,
             icon: _isDeleting
@@ -784,7 +801,7 @@ class _TaskDialogState extends State<_TaskDialog> {
             ),
           ),
         TextButton(
-          onPressed: _isSaving || _isUploading || _isDeleting
+          onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
               ? null
               : () =>
                     Navigator.of(context)
@@ -792,7 +809,9 @@ class _TaskDialogState extends State<_TaskDialog> {
           child: Text(_isEditing ? 'Schließen' : 'Abbrechen'),
         ),
         ElevatedButton(
-          onPressed: _isSaving || _isUploading || _isDeleting ? null : _submit,
+          onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
+              ? null
+              : _submit,
           child: _isSaving
               ? const SizedBox(
                   width: 18,
