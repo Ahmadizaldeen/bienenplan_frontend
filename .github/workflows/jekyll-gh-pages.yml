@@ -23,7 +23,7 @@ jobs:
      - name: Get dependencies
        run: flutter pub get
      - name: Build Flutter Web
-       run: flutter build web --release --base-href "/bienenplan_frontend/" --dart-define=API_SERVER_BASE_URL=https://mulled-custodian-patriot.ngrok-free.dev/BienenPlanBackend/backend/public
+       run: flutter build web --release --base-href "/bienenplan_frontend/" --dart-define=API_SERVER_BASE_URL=https://mulled-custodian-patriot.ngrok-free.dev
      - name: Setup Pages
        uses: actions/configure-pages@v5
      - name: Upload Flutter Web
