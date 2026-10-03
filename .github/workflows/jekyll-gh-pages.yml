@@ -23,7 +23,7 @@ jobs:
      - name: Get dependencies
        run: flutter pub get
      - name: Build Flutter Web
-       run: flutter build web --release --base-href "/YOUR_REPOSITORY_NAME/"
+       run: flutter build web --release --base-href "/bienenplan_frontend/"
      - name: Setup Pages
        uses: actions/configure-pages@v5
      - name: Upload Flutter Web
