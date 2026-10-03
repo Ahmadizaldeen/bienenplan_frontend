@@ -72,7 +72,7 @@ class ApiEndpoints {
 
 String getBaseUrl() {
   if (kIsWeb) {
-    return 'https://mulled-custodian-patriot.ngrok-free.dev/BienenPlanBackend/backend/public'; // Für Chrome / Web
+    return 'https://mulled-custodian-patriot.ngrok-free.dev'; // Für Chrome / Web
   }
 
   switch (defaultTargetPlatform) {
@@ -85,6 +85,6 @@ String getBaseUrl() {
     case TargetPlatform.macOS:
     case TargetPlatform.linux:
     case TargetPlatform.fuchsia:
-      return 'https://mulled-custodian-patriot.ngrok-free.dev/BienenPlanBackend/backend/public';
+      return 'https://mulled-custodian-patriot.ngrok-free.dev';
   }
 }
