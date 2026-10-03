@@ -1,5 +1,22 @@
 import 'package:flutter/material.dart';
 
+class AppPalette {
+  AppPalette._();
+
+  static const lightBackground = Color(0xFFF7F7F2);
+  static const lightSurface = Color(0xFFFFFFFA);
+  static const lightText = Color(0xFF242424);
+  static const lightMuted = Color(0xFF626262);
+  static const darkBackground = Color(0xFF202020);
+  static const darkSurface = Color(0xFF2B2B2B);
+  static const darkText = Color(0xFFF2F2EE);
+  static const darkMuted = Color(0xFFB9B9B4);
+  static const accent = Color(0xFF126B5B);
+  static const accentLight = Color(0xFF72D7B6);
+  static const warning = Color(0xFFE8BF68);
+  static const danger = Color(0xFFB3261E);
+}
+
 class AppColors {
   AppColors._();
 
@@ -57,26 +74,15 @@ class AppColors {
   /// Single source of truth for the animated honeycomb background.
   /// Keep the palette derivation in one place so theme-specific changes stay consistent.
   static HoneycombThemeData honeycombPalette(ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
     final scheme = theme.colorScheme;
 
     return HoneycombThemeData(
-      linkColor: isDark
-          ? scheme.primary.withValues(alpha: 0.32)
-          : AppColors.honeycombLinkLight,
-      glowColor: isDark
-          ? scheme.primary.withValues(alpha: 0.28)
-          : AppColors.honeycombGlowLight,
-      nodeColor: isDark
-          ? scheme.onSurface.withValues(alpha: 0.85)
-          : AppColors.honeycombNodeLight,
-      coreColor: isDark
-          ? scheme.primaryContainer.withValues(alpha: 0.80)
-          : AppColors.honeycombCoreLight,
-      reflexColor: isDark
-          ? AppColors.honeycombReflexDark
-          : AppColors.honeycombReflexLight,
-      specialNodeColor: AppColors.honeycombSpecialNode,
+      linkColor: scheme.outline.withValues(alpha: 0.22),
+      glowColor: scheme.primary.withValues(alpha: 0.14),
+      nodeColor: scheme.onSurface.withValues(alpha: 0.5),
+      coreColor: scheme.primaryContainer.withValues(alpha: 0.8),
+      reflexColor: scheme.onSurface.withValues(alpha: 0.06),
+      specialNodeColor: scheme.primary.withValues(alpha: 0.75),
     );
   }
 }
@@ -84,78 +90,78 @@ class AppColors {
 class _BrandColors {
   const _BrandColors();
 
-  static const primary = Color(0xFF8A5A00);
-  static const accent = Color(0xFF126B5B);
-  static const background = Color(0xFFF5F8F5);
-  static const backgroundDark = Color(0xFF111B18);
-  static const buttonText = Color(0xFF17221F);
+  static const primary = AppPalette.lightMuted;
+  static const accent = AppPalette.accent;
+  static const background = AppPalette.lightBackground;
+  static const backgroundDark = AppPalette.darkBackground;
+  static const buttonText = AppPalette.lightText;
 }
 
 class _TextColors {
   const _TextColors();
 
-  static const primary = Color(0xFF17221F);
-  static const secondary = Color(0xFF42534D);
-  static const tertiary = Color(0xFF566861);
-  static const onWhite = Color(0xFF17221F);
-  static const onDark = Color(0xFFF1F5F2);
+  static const primary = AppPalette.lightText;
+  static const secondary = AppPalette.lightMuted;
+  static const tertiary = AppPalette.lightMuted;
+  static const onWhite = AppPalette.lightText;
+  static const onDark = AppPalette.darkText;
 }
 
 class _SurfaceColors {
   const _SurfaceColors();
 
-  static const white = Color(0xFFFFFFFF);
-  static const whiteSoft = Color(0xFFF0F4F1);
-  static const whiteMuted = Color(0xFFE5ECE7);
-  static const whiteFaint = Color(0x29FFFFFF);
-  static const warmPanel = Color(0xFFF3E7C7);
-  static const warmPanelBorder = Color(0xFFB18A3B);
-  static const shadowSoft = Color(0x0A000000);
-  static const glassTintLight = Color(0xD9FFFFFF);
-  static const glassBorderLight = Color(0xE6FFFFFF);
-  static const glassTintDark = Color(0xB3111B18);
-  static const glassBorderDark = Color(0x665A8A7C);
+  static const white = AppPalette.lightSurface;
+  static const whiteSoft = AppPalette.lightBackground;
+  static const whiteMuted = AppPalette.lightBackground;
+  static const whiteFaint = AppPalette.lightSurface;
+  static const warmPanel = AppPalette.lightSurface;
+  static const warmPanelBorder = AppPalette.lightMuted;
+  static const shadowSoft = AppPalette.darkBackground;
+  static const glassTintLight = AppPalette.lightSurface;
+  static const glassBorderLight = AppPalette.lightMuted;
+  static const glassTintDark = AppPalette.darkSurface;
+  static const glassBorderDark = AppPalette.darkMuted;
 }
 
 class _StatusColors {
   const _StatusColors();
 
-  static const warning = Color(0xFF9A6100);
-  static const danger = Color(0xFFB3261E);
-  static const pending = Color(0xFF526A72);
-  static const mutedBlack = Color(0x8A000000);
+  static const warning = AppPalette.warning;
+  static const danger = AppPalette.danger;
+  static const pending = AppPalette.lightMuted;
+  static const mutedBlack = AppPalette.lightMuted;
 }
 
 class _HoneycombColors {
   const _HoneycombColors();
 
-  static const linkLight = Color(0x38FFFFFF);
-  static const linkDark = Color(0x5272D7B6);
-  static const glowLight = Color(0x59E8BF68);
-  static const glowDark = Color(0x4772D7B6);
-  static const nodeLight = Color(0xBFFFFFFF);
-  static const nodeDark = Color(0xD9E9F4EF);
-  static const coreLight = Color(0xCCF8E8C1);
-  static const coreDark = Color(0xCCE8BF68);
-  static const reflexLight = Color(0x1AFFFFFF);
-  static const reflexDark = Color(0x14FFFFFF);
-  static const specialNode = Color(0xF072D7B6);
+  static const linkLight = AppPalette.lightMuted;
+  static const linkDark = AppPalette.darkMuted;
+  static const glowLight = AppPalette.accent;
+  static const glowDark = AppPalette.accentLight;
+  static const nodeLight = AppPalette.lightMuted;
+  static const nodeDark = AppPalette.darkMuted;
+  static const coreLight = AppPalette.lightSurface;
+  static const coreDark = AppPalette.darkSurface;
+  static const reflexLight = AppPalette.lightSurface;
+  static const reflexDark = AppPalette.darkText;
+  static const specialNode = AppPalette.accentLight;
 }
 
 class _RegisterColors {
   const _RegisterColors();
 
-  final backgroundStart = const Color(0xFF126B5B);
-  final backgroundCenter = const Color(0xFF104B40);
-  final backgroundEnd = const Color(0xFF102F2B);
-  final lightDeep = const Color(0xFF72D7B6);
-  final lightAccent = const Color(0xFFE8BF68);
-  final lightMuted = const Color(0xFFD5F0E6);
-  final iconTint = const Color(0xFFF3D58E);
-  final heading = const Color(0xFFF6F8F5);
-  final body = const Color(0xFFD7E7E0);
-  final iconSurface = const Color(0x29FFFFFF);
-  final iconBorder = const Color(0x6655A38D);
+  final backgroundStart = AppPalette.darkBackground;
+  final backgroundCenter = AppPalette.darkSurface;
+  final backgroundEnd = AppPalette.darkBackground;
+  final lightDeep = AppPalette.accentLight;
+  final lightAccent = AppPalette.warning;
+  final lightMuted = AppPalette.darkMuted;
+  final iconTint = AppPalette.accentLight;
+  final heading = AppPalette.darkText;
+  final body = AppPalette.darkMuted;
+  final iconSurface = AppPalette.darkSurface;
+  final iconBorder = AppPalette.darkMuted;
 }
 
 class HoneycombThemeData {
@@ -243,44 +249,63 @@ class AppTheme {
 
   static ColorScheme _colorScheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
+    final background = isDark
+        ? AppPalette.darkBackground
+        : AppPalette.lightBackground;
+    final surface = isDark ? AppPalette.darkSurface : AppPalette.lightSurface;
+    final foreground = isDark ? AppPalette.darkText : AppPalette.lightText;
+    final muted = isDark ? AppPalette.darkMuted : AppPalette.lightMuted;
+    final accent = isDark ? AppPalette.accentLight : AppPalette.accent;
+    final secondary = isDark
+        ? AppPalette.warning
+        : Color.lerp(AppPalette.warning, AppPalette.lightText, 0.55)!;
+    final error = isDark
+        ? Color.lerp(AppPalette.danger, AppPalette.darkText, 0.65)!
+        : AppPalette.danger;
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
+      seedColor: accent,
       brightness: brightness,
     );
 
     return scheme.copyWith(
-      primary: isDark ? const Color(0xFF72D7B6) : AppColors.accent,
-      onPrimary: isDark ? const Color(0xFF073A30) : AppColors.surfaceWhite,
-      primaryContainer: isDark
-          ? const Color(0xFF17594A)
-          : const Color(0xFFD2F1E8),
-      onPrimaryContainer: isDark
-          ? const Color(0xFFD5F4E8)
-          : const Color(0xFF123B33),
-      secondary: isDark ? const Color(0xFFF3C969) : AppColors.primary,
-      onSecondary: isDark ? const Color(0xFF412C00) : AppColors.surfaceWhite,
-      secondaryContainer: isDark
-          ? const Color(0xFF5B430E)
-          : const Color(0xFFF3E7C7),
-      onSecondaryContainer: isDark
-          ? const Color(0xFFFFE9B0)
-          : const Color(0xFF493000),
-      surface: isDark ? AppColors.backgroundDark : AppColors.background,
-      onSurface: isDark ? AppColors.textOnDark : AppColors.textPrimary,
-      onSurfaceVariant: isDark
-          ? const Color(0xFFB9C9C2)
-          : AppColors.textSecondary,
-      outline: isDark ? const Color(0xFF82958D) : const Color(0xFF687873),
-      outlineVariant: isDark
-          ? const Color(0xFF3D5149)
-          : const Color(0xFFCCD6D0),
-      error: isDark ? const Color(0xFFFFB4A9) : AppColors.danger,
-      onError: isDark ? const Color(0xFF690005) : AppColors.surfaceWhite,
+      primary: accent,
+      onPrimary: isDark ? AppPalette.darkBackground : AppPalette.lightSurface,
+      primaryContainer: Color.lerp(surface, accent, 0.14),
+      onPrimaryContainer: foreground,
+      secondary: secondary,
+      onSecondary: isDark ? AppPalette.darkBackground : AppPalette.lightSurface,
+      secondaryContainer: Color.lerp(surface, secondary, 0.14),
+      onSecondaryContainer: foreground,
+      tertiary: muted,
+      onTertiary: background,
+      tertiaryContainer: surface,
+      onTertiaryContainer: foreground,
+      surface: background,
+      surfaceDim: Color.lerp(background, foreground, 0.06),
+      surfaceBright: surface,
+      surfaceContainerLowest: background,
+      surfaceContainerLow: Color.lerp(background, surface, 0.5),
+      surfaceContainer: surface,
+      surfaceContainerHigh: Color.lerp(surface, foreground, 0.04),
+      surfaceContainerHighest: Color.lerp(surface, foreground, 0.08),
+      onSurface: foreground,
+      onSurfaceVariant: muted,
+      outline: muted,
+      outlineVariant: Color.lerp(surface, muted, 0.3),
+      error: error,
+      onError: isDark ? AppPalette.darkBackground : AppPalette.lightSurface,
+      errorContainer: Color.lerp(surface, error, 0.14),
+      onErrorContainer: foreground,
+      inverseSurface: isDark ? AppPalette.lightSurface : AppPalette.darkSurface,
+      onInverseSurface: isDark ? AppPalette.lightText : AppPalette.darkText,
+      inversePrimary: isDark ? AppPalette.accent : AppPalette.accentLight,
+      surfaceTint: Colors.transparent,
+      shadow: AppPalette.darkBackground,
+      scrim: AppPalette.darkBackground,
     );
   }
 
   static ThemeData _buildTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
     final scheme = _colorScheme(brightness);
     final fieldBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -301,7 +326,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: isDark ? const Color(0xFF1A2823) : AppColors.surfaceWhite,
+        color: scheme.surfaceContainer,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -309,9 +334,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: isDark
-            ? const Color(0xFF1A2823)
-            : AppColors.surfaceWhite,
+        backgroundColor: scheme.surfaceContainer,
         titleTextStyle: _textTheme(brightness).titleLarge,
         contentTextStyle: _textTheme(brightness).bodyMedium,
         shape: RoundedRectangleBorder(
@@ -320,8 +343,8 @@ class AppTheme {
       ),
       dividerTheme: DividerThemeData(color: scheme.outlineVariant),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: const Color(0xFF263831),
-        contentTextStyle: const TextStyle(color: AppColors.textOnDark),
+        backgroundColor: scheme.inverseSurface,
+        contentTextStyle: TextStyle(color: scheme.onInverseSurface),
         behavior: SnackBarBehavior.floating,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -355,7 +378,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF1A2823) : AppColors.surfaceWhite,
+        fillColor: scheme.surfaceContainer,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
