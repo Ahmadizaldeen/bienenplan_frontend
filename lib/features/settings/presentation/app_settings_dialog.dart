@@ -23,6 +23,7 @@ class AppSettingsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final userName = userController?.currentUser?.name ?? 'Benutzer';
     final userEmail =
         userController?.currentUser?.email ?? 'keine E-Mail hinterlegt';
@@ -62,14 +63,13 @@ class AppSettingsDialog extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           userEmail,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.textSecondary),
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -77,13 +77,13 @@ class AppSettingsDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text(
+              Text(
                 'App-Einstellungen',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppColors.textSecondary,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -144,6 +144,7 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -151,16 +152,13 @@ class _SettingsTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
+          color: scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(
-            color: AppColors.warmPanelBorder.withValues(alpha: 0.5),
-            width: 1,
-          ),
+          border: Border.all(color: scheme.outlineVariant, width: 1),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.accent),
+            Icon(icon, color: scheme.primary),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -168,21 +166,18 @@ class _SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                        ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           ],
         ),
       ),

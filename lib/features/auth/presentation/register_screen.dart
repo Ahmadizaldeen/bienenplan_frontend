@@ -72,7 +72,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: TextStyle(color: Theme.of(context).colorScheme.onError),
+        ),
         backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
@@ -80,6 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Stack(
         children: [
@@ -104,15 +108,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Container(
                             padding: const EdgeInsets.all(AppSpacing.md),
                             decoration: BoxDecoration(
-                              color: AppColors.register.iconSurface,
+                              color: scheme.surfaceContainer,
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(
-                                color: AppColors.register.iconBorder,
-                              ),
+                              border: Border.all(color: scheme.outlineVariant),
                             ),
                             child: Icon(
                               Icons.person_add_alt_1_rounded,
-                              color: AppColors.register.iconTint,
+                              color: scheme.primary,
                               size: 32,
                             ),
                           )
@@ -124,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             'Konto erstellen',
                             style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                                  color: AppColors.register.heading,
+                                  color: scheme.onSurface,
                                   fontWeight: FontWeight.bold,
                                 ),
                           )
@@ -135,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(
                         'Registriere dich, um BienenPlan zu nutzen.',
                         style: Theme.of(context).textTheme.bodyLarge
-                            ?.copyWith(color: AppColors.register.body),
+                            ?.copyWith(color: scheme.onSurfaceVariant),
                       ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
                       const SizedBox(height: AppSpacing.xl),
                       GlassContainer(

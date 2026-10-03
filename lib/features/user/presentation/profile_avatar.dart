@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../core/api/api_endpoints.dart';
-import '../../../core/theme/app_theme.dart';
 import '../data/user_model.dart';
 
 /// Zeigt das Profilbild oder Initialen, wenn kein Bild vorhanden bzw. das
@@ -22,21 +21,16 @@ class ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final picture = user?.picture;
     final fallback = Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primary,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary),
       alignment: Alignment.center,
       child: Text(
         _initialsFromName(user?.name ?? ''),
-        style: const TextStyle(
-          color: AppColors.whiteOverlay,
-          fontWeight: FontWeight.w700,
-        ),
+        style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700),
       ),
     );
 

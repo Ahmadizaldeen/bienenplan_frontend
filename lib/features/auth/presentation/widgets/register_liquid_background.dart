@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
-
 class RegisterLiquidBackground extends StatefulWidget {
   const RegisterLiquidBackground({super.key});
 
@@ -31,6 +29,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return RepaintBoundary(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -38,9 +37,9 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.register.backgroundStart,
-              AppColors.register.backgroundCenter,
-              AppColors.register.backgroundEnd,
+              scheme.surface,
+              scheme.surfaceContainerLow,
+              scheme.surface,
             ],
             stops: [0, .54, 1],
           ),
@@ -58,7 +57,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                   child: Transform.rotate(
                     angle: -.28,
                     child: _LiquidLight(
-                      color: AppColors.register.lightDeep,
+                      color: scheme.primaryContainer,
                       widthFactor: 1.55,
                       height: 310,
                       opacity: .58,
@@ -70,7 +69,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                   child: Transform.rotate(
                     angle: .36,
                     child: _LiquidLight(
-                      color: AppColors.register.lightAccent,
+                      color: scheme.secondaryContainer,
                       widthFactor: 1.45,
                       height: 230,
                       opacity: .52,
@@ -82,7 +81,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                   child: Transform.rotate(
                     angle: .12,
                     child: _LiquidLight(
-                      color: AppColors.register.lightMuted,
+                      color: scheme.surfaceContainerHigh,
                       widthFactor: 1.6,
                       height: 270,
                       opacity: .42,
@@ -94,7 +93,7 @@ class _RegisterLiquidBackgroundState extends State<RegisterLiquidBackground>
                   child: Transform.rotate(
                     angle: -.22,
                     child: _LiquidLight(
-                      color: AppColors.register.lightDeep,
+                      color: scheme.primaryContainer,
                       widthFactor: 1.35,
                       height: 210,
                       opacity: .46,

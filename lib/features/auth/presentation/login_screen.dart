@@ -74,7 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: TextStyle(color: Theme.of(context).colorScheme.onError),
+        ),
         backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
@@ -82,15 +85,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.accent],
+                colors: [scheme.surface, scheme.surfaceContainerLow],
               ),
             ),
           ),
@@ -107,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
+                        color: scheme.shadow.withValues(alpha: 0.12),
                         blurRadius: 30,
                         offset: const Offset(0, 16),
                       ),
@@ -117,9 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: scheme.surfaceContainer,
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: scheme.outlineVariant,
                           width: 1,
                         ),
                       ),
