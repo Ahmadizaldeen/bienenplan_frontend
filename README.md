@@ -221,3 +221,5 @@ statt des Projektpfads nur den Host und ggf. Port an, z. B.
 
 Das zugehörige REST-Backend basiert auf Slim Framework, PHP und MySQL:
 <https://github.com/Ahmadizaldeen/BienenPlan>
+
+[![Deploy Flutter Web to GitHub Pages](https://github.com/Ahmadizaldeen/bienenplan_frontend/actions/workflows/jekyll-gh-pages.yml/badge.svg)](https://github.com/Ahmadizaldeen/bienenplan_frontend/actions/workflows/jekyll-gh-pages.yml)
