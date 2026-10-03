@@ -30,6 +30,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isProfileExpanded = false;
+  final _homeContentKey = GlobalKey();
+
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
   // der Refresh-Button in ProjectOverviewHeader dieselben Daten neu laden
   // können, die TaskListScreen und ProjectListWidget anzeigen.
@@ -67,13 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.accent],
+            colors: [scheme.surface, scheme.surfaceContainerLow],
           ),
         ),
         child: SafeArea(
@@ -84,17 +88,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
               final sidebar = UserProfileSidebar(
                 onLogout: widget.onLogout,
+                isExpanded: _isProfileExpanded,
+                onToggle: () => setState(() {
+                  _isProfileExpanded = !_isProfileExpanded;
+                }),
                 projectController: _projectController,
                 userController: _userController,
               );
               final content = _HomeContent(
+                key: _homeContentKey,
                 taskController: _taskController,
                 projectController: _projectController,
                 onRefresh: _refreshAll,
                 leading: isNarrowPhone ? sidebar : null,
               );
 
-              if (isWide) {
+              // Auf breiten Ansichten steht das ausgeklappte Profil neben dem Inhalt;
+              // eingeklappt wird es zur Leiste oberhalb des Inhalts.
+              if (isWide && _isProfileExpanded) {
                 final sidebarWidth =
                     ((constraints.maxWidth -
                                 2 * AppSpacing.lg -
@@ -107,7 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(width: sidebarWidth, child: sidebar),
+                      SizedBox(
+                        width: sidebarWidth,
+                        child: SingleChildScrollView(child: sidebar),
+                      ),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(child: content),
                     ],
@@ -123,7 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? content
                     : Column(
                         children: [
-                          sidebar,
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: constraints.maxHeight * 0.5,
+                            ),
+                            child: SingleChildScrollView(child: sidebar),
+                          ),
                           const SizedBox(height: AppSpacing.md),
                           Expanded(child: content),
                         ],
@@ -139,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
+    super.key,
     required this.taskController,
     required this.projectController,
     required this.onRefresh,
