@@ -11,11 +11,15 @@ class UserProfileSidebar extends StatelessWidget {
   const UserProfileSidebar({
     super.key,
     required this.onLogout,
+    required this.isExpanded,
+    required this.onToggle,
     this.projectController,
     this.userController,
   });
 
   final VoidCallback onLogout;
+  final bool isExpanded;
+  final VoidCallback onToggle;
 
   /// Optional von außen injizierter Controller, damit z.B. HomeScreen
   /// per Pull-to-Refresh dieselbe Projektliste neu laden kann.
@@ -27,16 +31,87 @@ class UserProfileSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final boardDecoration = BoxDecoration(
-      color: AppColors.warmPanel.withValues(alpha: 0.52),
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      border: Border.all(
-        color: AppColors.warmPanelBorder.withValues(alpha: 0.85),
-        width: 1.2,
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      alignment: Alignment.topCenter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Die kompakte Kopfzeile bleibt mit Nutzer und Projekt synchron,
+          // auch wenn die darunterliegenden Details eingeklappt sind.
+          AnimatedBuilder(
+            animation: Listenable.merge([userController, projectController]),
+            builder: (context, _) {
+              final userName = userController?.currentUser?.name ?? 'Benutzer';
+              final projectName =
+                  projectController?.selectedProject?.name ??
+                  (projectController?.isLoading == true
+                      ? 'Projekte werden geladen'
+                      : 'Kein Projekt');
+              final toggleLabel = isExpanded
+                  ? 'Profil und Projekte zuklappen'
+                  : 'Profil und Projekte aufklappen';
+
+              return Semantics(
+                expanded: isExpanded,
+                child: Tooltip(
+                  message: '$toggleLabel: $userName > $projectName',
+                  child: TextButton.icon(
+                    key: const ValueKey('profile-project-toggle'),
+                    onPressed: onToggle,
+                    style: TextButton.styleFrom(
+                      foregroundColor: scheme.onSurface,
+                      backgroundColor: scheme.surfaceContainer,
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                    ),
+                    icon: Icon(isExpanded ? Icons.close : Icons.menu),
+                    label: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(Icons.chevron_right, size: 18),
+                        ),
+                        Flexible(
+                          child: Text(
+                            projectName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (isExpanded) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _buildDetails(context),
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _buildDetails(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final boardDecoration = BoxDecoration(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      border: Border.all(color: scheme.outlineVariant, width: 1.2),
       boxShadow: [
         BoxShadow(
-          color: AppColors.shadowSoft,
+          color: scheme.shadow.withValues(alpha: 0.06),
           blurRadius: 6,
           offset: const Offset(0, 2),
         ),
@@ -85,7 +160,6 @@ class UserProfileSidebar extends StatelessWidget {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 20,
-                                      color: AppColors.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -95,7 +169,7 @@ class UserProfileSidebar extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
-                                          color: AppColors.textSecondary,
+                                          color: scheme.onSurfaceVariant,
                                         ),
                                   ),
                                 ],
@@ -112,7 +186,6 @@ class UserProfileSidebar extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
-                                  color: AppColors.textPrimary,
                                 ),
                               ),
                               SizedBox(height: 4),
@@ -120,9 +193,6 @@ class UserProfileSidebar extends StatelessWidget {
                                 '...@example.com',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                ),
                               ),
                             ],
                           ),
@@ -131,13 +201,13 @@ class UserProfileSidebar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text(
+              Text(
                 'Profil',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppColors.textSecondary,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -150,16 +220,13 @@ class UserProfileSidebar extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.55),
+                    color: scheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(
-                      color: AppColors.warmPanelBorder.withValues(alpha: 0.6),
-                      width: 1,
-                    ),
+                    border: Border.all(color: scheme.outlineVariant, width: 1),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.work_outline, color: AppColors.accent),
+                      Icon(Icons.work_outline, color: scheme.primary),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Column(
@@ -173,15 +240,12 @@ class UserProfileSidebar extends StatelessWidget {
                             Text(
                               'Profil, Benachrichtigungen & mehr',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppColors.textSecondary),
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textSecondary,
-                      ),
+                      Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
                     ],
                   ),
                 ),
@@ -205,13 +269,13 @@ class UserProfileSidebar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Projekte',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppColors.textSecondary,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),

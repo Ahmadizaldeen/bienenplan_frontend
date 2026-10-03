@@ -53,6 +53,18 @@ void main() {
 
       expect(find.text('Container 0'), findsOneWidget);
       expect(find.text('Aufgabe 0'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('container-toggle-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Aufgabe 0'), findsNothing);
+      expect(find.text('Aufgabe 1'), findsOneWidget);
+      expect(find.text('Container 0'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('container-toggle-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Aufgabe 0'), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('task-card-1'))).width,
+        tester.getSize(find.byType(Divider).first).width,
+      );
       expect(tester.takeException(), isNull);
       await tester.drag(find.byType(TaskListScreen), const Offset(0, -500));
       await tester.pumpAndSettle();

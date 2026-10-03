@@ -90,8 +90,11 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
       } else if (_controller.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_controller.errorMessage!),
-            backgroundColor: AppColors.danger,
+            content: Text(
+              _controller.errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.onError),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -101,6 +104,7 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
@@ -114,12 +118,9 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhiteFaint,
+            color: scheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(
-              color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.22),
-              width: 1,
-            ),
+            border: Border.all(color: scheme.outlineVariant, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,6 +172,7 @@ class _ProjectTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onSelect,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -182,14 +184,10 @@ class _ProjectTile extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: active
-              ? AppColors.accent.withValues(alpha: 0.18)
-              : AppColors.surfaceWhiteFaint,
+          color: active ? scheme.primaryContainer : scheme.surfaceContainer,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(
-            color: active
-                ? AppColors.accent
-                : AppColors.surfaceWhiteSoft.withValues(alpha: 0.25),
+            color: active ? scheme.primary : scheme.outlineVariant,
             width: active ? 1.5 : 1,
           ),
         ),
@@ -202,19 +200,13 @@ class _ProjectTile extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: active
-                      ? AppColors.accent
-                      : AppColors.surfaceWhiteSoft.withValues(alpha: 0.5),
+                  color: active ? scheme.primary : scheme.outline,
                   width: 2,
                 ),
-                color: active ? AppColors.accent : Colors.transparent,
+                color: active ? scheme.primary : Colors.transparent,
               ),
               child: active
-                  ? const Icon(
-                      Icons.check,
-                      size: 12,
-                      color: AppColors.whiteOverlay,
-                    )
+                  ? Icon(Icons.check, size: 12, color: scheme.onPrimary)
                   : null,
             ),
             const SizedBox(width: AppSpacing.xs),
@@ -226,15 +218,15 @@ class _ProjectTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: AppColors.textPrimary,
+                  color: scheme.onSurface,
                 ),
               ),
             ),
             if (active)
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 14,
-                color: AppColors.accent,
+                color: scheme.primary,
               ),
           ],
         ),

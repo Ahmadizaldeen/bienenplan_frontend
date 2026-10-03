@@ -24,20 +24,12 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tint = isDark ? AppColors.glassTintDark : AppColors.glassTintLight;
-    final border = isDark
-        ? AppColors.glassBorderDark
-        : AppColors.glassBorderLight;
-    final glow = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.white.withValues(alpha: 0.18);
-    final highlight = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.white.withValues(alpha: 0.20);
-    final shadow = isDark
-        ? Colors.black.withValues(alpha: 0.18)
-        : Colors.black.withValues(alpha: 0.08);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final tint = scheme.surfaceContainer;
+    final border = scheme.outlineVariant;
+    final shadow = scheme.shadow.withValues(alpha: isDark ? 0.18 : 0.08);
 
     return Container(
       padding: padding,
@@ -52,20 +44,11 @@ class GlassContainer extends StatelessWidget {
             offset: const Offset(0, 6),
             spreadRadius: 0,
           ),
-          BoxShadow(
-            color: glow,
-            blurRadius: blurSigma / 2,
-            offset: const Offset(0, 2),
-            spreadRadius: 0,
-          ),
         ],
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            highlight,
-            Colors.white.withValues(alpha: isDark ? 0.02 : 0.08),
-          ],
+          colors: [tint, scheme.surfaceContainerLow],
           stops: const [0.0, 1.0],
         ),
       ),

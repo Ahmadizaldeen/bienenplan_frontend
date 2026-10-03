@@ -65,6 +65,9 @@ void main() {
 
     expect(find.text('Testaufgabe'), findsOneWidget);
     expect(find.text('In Bearbeitung'), findsOneWidget);
+    final titleRect = tester.getRect(find.text('Testaufgabe'));
+    final statusRect = tester.getRect(find.text('In Bearbeitung'));
+    expect((titleRect.center.dy - statusRect.center.dy).abs(), lessThan(1));
     expect(tester.takeException(), isNull);
   });
 
