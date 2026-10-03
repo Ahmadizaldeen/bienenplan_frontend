@@ -12,6 +12,18 @@ import 'package:bienenplan_frontend/features/tasks/presentation/task_dialog.dart
 import 'package:bienenplan_frontend/features/user/data/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bienenplan_frontend/features/subtasks/data/subtask_model.dart';
+import 'package:bienenplan_frontend/features/subtasks/data/subtask_repository.dart';
+
+class _UnexpectedSubtaskRepository extends SubtaskRepository {
+  int loads = 0;
+
+  @override
+  Future<SubtaskList> list(int taskId) async {
+    loads++;
+    throw StateError('Unsaved tasks must not load subtasks');
+  }
+}
 
 class _DeletingTaskRepository implements TaskRepositoryContract {
   final List<Task> tasks = [
@@ -139,6 +151,15 @@ void main() {
 
     await tester.tap(find.text('Dialog öffnen'));
     await tester.pumpAndSettle();
+    expect(find.text('Teilaufgaben'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Teilaufgaben')).dy,
+      greaterThan(tester.getBottomLeft(find.text('Frist wählen')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Teilaufgaben')).dy,
+      lessThan(tester.getTopLeft(find.text('Anhänge')).dy),
+    );
     await tester.tap(find.widgetWithText(TextButton, 'Löschen'));
     await tester.pumpAndSettle();
 
@@ -150,5 +171,61 @@ void main() {
 
     expect(taskRepository.tasks, isEmpty);
     expect(find.text('Aufgabe bearbeiten'), findsNothing);
+  });
+
+  testWidgets('new task shows subtasks without loading before saving', (
+    tester,
+  ) async {
+    final subtaskRepository = _UnexpectedSubtaskRepository();
+    final controller = TaskController(
+      taskRepository: _DeletingTaskRepository(),
+      containerRepository: _FakeContainerRepository(),
+      groupRepository: _FakeGroupRepository(),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showTaskDialog(
+                context,
+                controller: controller,
+                containerId: 1,
+                subtaskRepository: subtaskRepository,
+              ),
+              child: const Text('Neu'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Neu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Neue Aufgabe'), findsOneWidget);
+    expect(find.text('Teilaufgaben'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Teilaufgaben')).dy,
+      greaterThan(tester.getBottomLeft(find.text('Frist wählen')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Teilaufgaben')).dy,
+      lessThan(tester.getTopLeft(find.text('Anhänge')).dy),
+    );
+    expect(
+      find.text(
+        'Teilaufgaben können nach dem Erstellen der Aufgabe hinzugefügt und bearbeitet werden.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(ExpansionTile), findsNothing);
+    expect(find.text('Teilaufgabe hinzufuegen'), findsNothing);
+    expect(
+      tester
+          .widget<ListTile>(find.byKey(const ValueKey('subtask-section')))
+          .onTap,
+      isNull,
+    );
+    expect(subtaskRepository.loads, 0);
   });
 }
