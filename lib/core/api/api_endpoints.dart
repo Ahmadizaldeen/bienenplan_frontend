@@ -89,6 +89,6 @@ String getBaseUrl() {
     case TargetPlatform.macOS:
     case TargetPlatform.linux:
     case TargetPlatform.fuchsia:
-      return 'http://localhost';
+      return 'https://mulled-custodian-patriot.ngrok-free.dev';
   }
 }
