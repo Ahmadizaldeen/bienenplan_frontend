@@ -18,16 +18,16 @@ class TaskItemWidget extends StatelessWidget {
     this.showContainerBadge = true,
   });
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String status, ColorScheme scheme) {
     switch (status.trim().toLowerCase()) {
       case 'done':
-        return AppColors.accent;
+        return scheme.primary;
       case 'in_progress':
-        return AppColors.primary;
+        return scheme.secondary;
       case 'open':
       case 'pending':
       default:
-        return AppColors.statusPending;
+        return scheme.onSurfaceVariant;
     }
   }
 
@@ -48,7 +48,8 @@ class TaskItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(task.status);
+    final scheme = Theme.of(context).colorScheme;
+    final statusColor = _getStatusColor(task.status, scheme);
     final descriptionBody = taskDescriptionBody(task.title, task.description);
     final statusBadge = Container(
       padding: const EdgeInsets.symmetric(
@@ -81,69 +82,52 @@ class TaskItemWidget extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.16),
+            color: scheme.surfaceContainer,
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(
-              color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.15),
-            ),
+            border: Border.all(color: scheme.outlineVariant),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 300;
-              final details = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showContainerBadge) ...[
+                Text(
+                  task.containerTitle.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              Row(
                 children: [
-                  if (showContainerBadge) ...[
-                    Text(
-                      task.containerTitle.toUpperCase(),
+                  Expanded(
+                    child: Text(
+                      task.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 2),
-                  ],
-                  Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
-                  if (descriptionBody.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      descriptionBody,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              );
-              if (stacked) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    details,
-                    const SizedBox(height: AppSpacing.sm),
-                    statusBadge,
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: details),
                   const SizedBox(width: AppSpacing.sm),
                   statusBadge,
                 ],
-              );
-            },
+              ),
+              if (descriptionBody.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  descriptionBody,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
