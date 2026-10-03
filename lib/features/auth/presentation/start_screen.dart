@@ -70,7 +70,7 @@ class _StartScreenState extends State<StartScreen> {
               isError ? Icons.error_outline : Icons.check_circle_outline,
               color: isError
                   ? Theme.of(context).colorScheme.error
-                  : AppColors.accent,
+                  : Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(title),
@@ -89,17 +89,18 @@ class _StartScreenState extends State<StartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     // build beschreibt die sichtbare Oberfläche des Startscreens.
     return Scaffold(
       body: Stack(
         children: [
           // Der Farbverlauf bildet den Hintergrund.
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.accent],
+                colors: [scheme.surface, scheme.surfaceContainerLow],
               ),
             ),
           ),
