@@ -22,6 +22,8 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Aufgabenkarten zeigen den Titel in der ersten Zeile und darunter die
   Beschreibung, ohne den Titel zu wiederholen
 - Aufgaben im Bearbeitungsdialog nach einer Bestätigung löschen
+- Teilaufgaben-Bereich beim Erstellen und Bearbeiten direkt unter der Frist;
+  bei gespeicherten Aufgaben: Checkliste, Lazy Loading, sofortiges Speichern und Soft-Delete
 - Standardstatus neuer Aufgaben ist `open`; ein leerer Status wird als „Offen“ angezeigt
 - Gruppen einer Aufgabe per Dropdown zuweisen oder entfernen; bei neuen Aufgaben
   wird die Auswahl vorgemerkt und nach dem Erstellen übernommen
@@ -101,6 +103,29 @@ die Benutzer über `GET /api/users` und sendet `POST /api/groups` mit `name` und
 (Fallback: Name „Personal user {id}“) und zeigt `personal_user_name` als
 Anzeigenamen an. Gruppenlisten werden nach diesem Anzeigenamen sortiert.
 
+## Teilaufgaben
+
+Das getrennte Feature `lib/features/subtasks/` enthält ein unveränderliches Modell,
+ein injizierbares Repository, einen Provider-/ChangeNotifier-Controller und das
+Widget `SubtaskSection`. Der Task-Dialog zeigt den Bereich auch beim Erstellen;
+ohne gespeicherte Task-ID erscheint ein statischer, nicht aufklappbarer Hinweis:
+„Teilaufgaben können nach dem Erstellen der Aufgabe hinzugefügt und bearbeitet
+werden.“ Es erfolgen keine Subtask-Anfragen. Aufgabenkarten zeigen keine Teilaufgaben.
+
+Der Bereich startet eingeklappt und lädt bei gespeicherten Aufgaben beim ersten
+Öffnen. Reihenfolge: ID.
+Container-/Projekt-Eigentümer können hinzufügen; Subtask-Ersteller und Eigentümer
+können umbenennen oder nach Bestätigung löschen. Zugewiesene Gruppenmitglieder
+können abhaken. Die API liefert die jeweiligen Berechtigungen.
+
+Änderungen werden unabhängig von „Speichern“ sofort übernommen; Schließen des
+Task-Dialogs nimmt sie nicht zurück. Der Status der Hauptaufgabe bleibt unabhängig.
+Bei Fehlern bleiben die bisherigen Daten erhalten und erneutes Laden ist möglich.
+Das Backend benötigt zuvor die Subtask-Migration `003_add_subtask_permissions.sql`
+(bei einem frischen Schema nicht erforderlich).
+
+Tests: `flutter test test/subtask_feature_test.dart test/task_delete_dialog_test.dart`.
+
 ## Sicherheit
 
 - Bei einer nicht autorisierten Antwort wird das Token gelöscht.
@@ -144,7 +169,7 @@ Farben ausserhalb der zentralen Palette.
 ## Noch offen
 
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
-- Teilaufgaben und Kommentare zu Aufgaben unterstützen
+- Kommentare zu Aufgaben unterstützen
 - Container bearbeiten oder löschen
 - Gruppenberechtigungen, Rollen und Zugriffsrechte in der Oberfläche abbilden
 - Responsive Darstellung für Web und Desktop weiter verfeinern

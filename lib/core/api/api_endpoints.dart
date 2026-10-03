@@ -30,6 +30,10 @@ class ApiEndpoints {
   // GET ruft eine Aufgabe ab, PUT aktualisiert sie, DELETE entfernt sie.
   static String taskDetail(int id) => "$baseUrl/tasks/$id";
 
+  static String subtasks(int taskId) => "${taskDetail(taskId)}/subtasks";
+  static String subtask(int taskId, int subtaskId) =>
+      "${subtasks(taskId)}/$subtaskId";
+
   // POST setzt den Status; der neue Status wird im Request-Body übergeben.
   static String updateTaskStatus(int id) => "$baseUrl/tasks/$id/status";
 
@@ -72,7 +76,7 @@ class ApiEndpoints {
 
 String getBaseUrl() {
   if (kIsWeb) {
-    return 'https://mulled-custodian-patriot.ngrok-free.dev'; // Für Chrome / Web
+    return 'https://localhost';
   }
 
   switch (defaultTargetPlatform) {

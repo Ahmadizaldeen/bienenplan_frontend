@@ -9,6 +9,8 @@ import 'api_exception.dart';
 class ApiClient {
   final _storage = const FlutterSecureStorage();
 
+  static const _ngrokHeaders = {'ngrok-skip-browser-warning': 'true'};
+
   // JWT Token speichern
   Future<void> saveToken(String token) async {
     await _storage.write(key: 'jwt_token', value: token);
@@ -30,6 +32,7 @@ class ApiClient {
     final response = await http.get(
       Uri.parse(url),
       headers: {
+        ..._ngrokHeaders,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -45,6 +48,7 @@ class ApiClient {
     final response = await http.post(
       Uri.parse(url),
       headers: {
+        ..._ngrokHeaders,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -61,6 +65,7 @@ class ApiClient {
     final response = await http.put(
       Uri.parse(url),
       headers: {
+        ..._ngrokHeaders,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -77,6 +82,7 @@ class ApiClient {
     final response = await http.delete(
       Uri.parse(url),
       headers: {
+        ..._ngrokHeaders,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -96,6 +102,7 @@ class ApiClient {
     final token = await getToken();
     final request = http.MultipartRequest('POST', Uri.parse(url))
       ..headers.addAll({
+        ..._ngrokHeaders,
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       })
@@ -115,6 +122,7 @@ class ApiClient {
     final token = await getToken();
     final request = http.MultipartRequest('POST', Uri.parse(url))
       ..headers.addAll({
+        ..._ngrokHeaders,
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       });
@@ -136,7 +144,10 @@ class ApiClient {
     final token = await getToken();
     final response = await http.get(
       Uri.parse(url),
-      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      headers: {
+        ..._ngrokHeaders,
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
     );
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.bodyBytes;
