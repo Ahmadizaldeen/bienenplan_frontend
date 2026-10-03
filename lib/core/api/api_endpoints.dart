@@ -72,7 +72,7 @@ class ApiEndpoints {
 
 String getBaseUrl() {
   if (kIsWeb) {
-    return 'http://localhost'; // Für Chrome / Web
+    return 'https://mulled-custodian-patriot.ngrok-free.dev/BienenPlanBackend/backend/public'; // Für Chrome / Web
   }
 
   switch (defaultTargetPlatform) {
