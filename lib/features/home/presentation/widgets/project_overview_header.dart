@@ -3,90 +3,128 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/glass_container.dart';
 
-class ProjectOverviewHeader extends StatelessWidget {
+class ProjectOverviewHeader extends StatefulWidget {
   const ProjectOverviewHeader({super.key, required this.onRefresh});
 
   final Future<void> Function() onRefresh;
 
   @override
+  State<ProjectOverviewHeader> createState() => _ProjectOverviewHeaderState();
+}
+
+class _ProjectOverviewHeaderState extends State<ProjectOverviewHeader> {
+  bool _isExpanded = true;
+
+  @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return GlassContainer(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final titleSize = constraints.maxWidth < 320 ? 22.0 : 28.0;
-              return Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Projektübersicht',
-                      style: TextStyle(
-                        fontSize: titleSize,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
+          if (_isExpanded)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final titleSize = constraints.maxWidth < 320 ? 22.0 : 28.0;
+                return Text(
+                  'Projektübersicht',
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurface,
+                  ),
+                );
+              },
+            ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.search, color: scheme.primary),
+                    hintText: 'Suche nach Aufgaben oder Projekten',
+                    filled: true,
+                    fillColor: scheme.surfaceContainer,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      borderSide: BorderSide.none,
                     ),
                   ),
-                  IconButton(
-                    onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh, color: AppColors.accent),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, color: AppColors.accent),
-              hintText: 'Suche nach Aufgaben oder Projekten',
-              filled: true,
-              fillColor: AppColors.surfaceWhiteSoft,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide: BorderSide.none,
+                ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.xs),
+              IconButton(
+                key: const ValueKey('project-overview-refresh'),
+                tooltip: 'Aktualisieren',
+                onPressed: widget.onRefresh,
+                icon: Icon(Icons.refresh, color: scheme.primary),
+              ),
+              IconButton(
+                key: const ValueKey('project-overview-toggle'),
+                tooltip: _isExpanded
+                    ? 'Projektübersicht einklappen'
+                    : 'Projektübersicht ausklappen',
+                onPressed: () => setState(() {
+                  _isExpanded = !_isExpanded;
+                }),
+                icon: Icon(
+                  _isExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 400;
-              final cardWidth = compact
-                  ? (constraints.maxWidth - 2 * AppSpacing.sm) / 3
-                  : 120.0;
+          // Die Kennzahlen klappen ein; das Suchfeld bleibt dauerhaft sichtbar.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _isExpanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: AppSpacing.lg),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 400;
+                          final cardWidth = compact
+                              ? (constraints.maxWidth - 2 * AppSpacing.sm) / 3
+                              : 120.0;
 
-              return Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  _MiniStatCard(
-                    label: 'Aktiv',
-                    value: '18',
-                    color: AppColors.primary,
-                    width: cardWidth,
-                    compact: compact,
-                  ),
-                  _MiniStatCard(
-                    label: 'Erledigt',
-                    value: '42',
-                    color: AppColors.accent,
-                    width: cardWidth,
-                    compact: compact,
-                  ),
-                  _MiniStatCard(
-                    label: 'Heute',
-                    value: '06',
-                    color: AppColors.textTertiary,
-                    width: cardWidth,
-                    compact: compact,
-                  ),
-                ],
-              );
-            },
+                          return Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              _MiniStatCard(
+                                label: 'Aktiv',
+                                value: '18',
+                                color: scheme.secondary,
+                                width: cardWidth,
+                                compact: compact,
+                              ),
+                              _MiniStatCard(
+                                label: 'Erledigt',
+                                value: '42',
+                                color: scheme.primary,
+                                width: cardWidth,
+                                compact: compact,
+                              ),
+                              _MiniStatCard(
+                                label: 'Heute',
+                                value: '06',
+                                color: scheme.onSurfaceVariant,
+                                width: cardWidth,
+                                compact: compact,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -111,11 +149,12 @@ class _MiniStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: width,
       padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhiteSoft.withValues(alpha: 0.42),
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Column(
@@ -123,9 +162,9 @@ class _MiniStatCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: scheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
             ),
           ),
