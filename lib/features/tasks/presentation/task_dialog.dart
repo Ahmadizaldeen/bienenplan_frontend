@@ -459,7 +459,12 @@ class _TaskDialogState extends State<_TaskDialog> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(confirmationContext).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(confirmationContext).colorScheme.error,
+              foregroundColor: Theme.of(confirmationContext)
+                  .colorScheme
+                  .onError,
+            ),
             child: const Text('Löschen'),
           ),
         ],
@@ -750,7 +755,9 @@ class _TaskDialogState extends State<_TaskDialog> {
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     _error!,
-                    style: const TextStyle(color: AppColors.danger),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ],
               ],
@@ -772,7 +779,9 @@ class _TaskDialogState extends State<_TaskDialog> {
                   )
                 : const Icon(Icons.delete_outline),
             label: const Text('Löschen'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
           ),
         TextButton(
           onPressed: _isSaving || _isUploading || _isDeleting
