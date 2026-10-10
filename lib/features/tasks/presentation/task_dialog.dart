@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/api/api_exception.dart';
 import '../application/task_controller.dart';
 import '../application/task_text_parser.dart';
 import '../data/group_model.dart';
@@ -10,7 +11,6 @@ import '../data/task_model.dart';
 import '../data/task_attachment.dart';
 import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
-import 'create_group_dialog.dart';
 import '../../subtasks/data/subtask_repository.dart';
 import '../../subtasks/presentation/widgets/subtask_section.dart';
 
@@ -20,6 +20,7 @@ Future<bool> showTaskDialog(
   BuildContext context, {
   required TaskController controller,
   required int containerId,
+  int? projectId,
   Task? task,
   SubtaskRepositoryContract? subtaskRepository,
 }) async {
@@ -28,6 +29,7 @@ Future<bool> showTaskDialog(
     builder: (dialogContext) => _TaskDialog(
       controller: controller,
       containerId: containerId,
+      projectId: projectId ?? task?.projectId,
       task: task,
       subtaskRepository: subtaskRepository ?? SubtaskRepository(),
     ),
@@ -39,12 +41,14 @@ class _TaskDialog extends StatefulWidget {
   const _TaskDialog({
     required this.controller,
     required this.containerId,
+    this.projectId,
     this.task,
     required this.subtaskRepository,
   });
 
   final TaskController controller;
   final int containerId;
+  final int? projectId;
   final Task? task;
   final SubtaskRepositoryContract subtaskRepository;
 
@@ -75,14 +79,12 @@ class _TaskDialogState extends State<_TaskDialog> {
   DateTime? _deadline;
 
   bool _isLoadingGroups = true;
-  bool _isCreatingGroup = false;
   bool _isSaving = false;
   bool _isDeleting = false;
   bool _isUploading = false;
   bool _changed = false;
   bool _subtasksBusy = false;
   String? _error;
-  String? _groupNotice;
   List<Group> _allGroups = const [];
   late final Set<int> _assignedGroupIds;
   int? _createdTaskId;
@@ -113,7 +115,10 @@ class _TaskDialogState extends State<_TaskDialog> {
   }
 
   Future<void> _loadGroups() async {
-    final allGroups = await widget.controller.fetchAllGroups();
+    final projectId = widget.projectId;
+    final allGroups = projectId == null
+        ? const <Group>[]
+        : await widget.controller.fetchGroupsForProject(projectId);
     final task = widget.task;
     final assigned = task == null
         ? const <Group>[]
@@ -168,74 +173,6 @@ class _TaskDialogState extends State<_TaskDialog> {
         _error = widget.controller.errorMessage;
       });
     }
-  }
-
-  Future<void> _createAndAssignGroup() async {
-    setState(() {
-      _isCreatingGroup = true;
-      _error = null;
-      _groupNotice = null;
-    });
-    final users = await widget.controller.fetchAllUsers();
-    if (!mounted) return;
-    if (users == null) {
-      setState(() {
-        _isCreatingGroup = false;
-        _error = widget.controller.errorMessage;
-      });
-      return;
-    }
-    setState(() => _isCreatingGroup = false);
-
-    final request = await showDialog<NewGroupRequest>(
-      context: context,
-      builder: (dialogContext) => CreateGroupDialog(users: users),
-    );
-    if (request == null || !mounted) return;
-
-    final normalizedName = request.name.toLowerCase();
-    Group? existingGroup;
-    for (final group in _allGroups) {
-      if (group.name.trim().toLowerCase() == normalizedName) {
-        existingGroup = group;
-        break;
-      }
-    }
-
-    if (existingGroup != null) {
-      if (!_assignedGroupIds.contains(existingGroup.id)) {
-        await _toggleGroup(existingGroup, true);
-      }
-      if (!mounted) return;
-      setState(() {
-        _groupNotice = 'Die Gruppe existiert bereits und wurde ausgewählt; ihre Mitglieder wurden nicht geändert.';
-      });
-      return;
-    }
-
-    setState(() => _isCreatingGroup = true);
-    final group = await widget.controller.createGroup(
-      request.name,
-      userIds: request.userIds,
-    );
-    if (!mounted) return;
-    if (group == null) {
-      setState(() {
-        _isCreatingGroup = false;
-        _error = widget.controller.errorMessage;
-      });
-      return;
-    }
-
-    setState(() {
-      _isCreatingGroup = false;
-      _allGroups = [..._allGroups, group]
-        ..sort(
-          (first, second) =>
-              first.label.toLowerCase().compareTo(second.label.toLowerCase()),
-        );
-    });
-    await _toggleGroup(group, true);
   }
 
   Future<void> _pickDeadline() async {
@@ -483,7 +420,14 @@ class _TaskDialogState extends State<_TaskDialog> {
       _isDeleting = true;
       _error = null;
     });
-    final success = await widget.controller.deleteTask(task.id);
+    bool success;
+    Object? deleteError;
+    try {
+      success = await widget.controller.deleteTask(task.id);
+    } catch (error) {
+      success = false;
+      deleteError = error;
+    }
     if (!mounted) return;
 
     if (success) {
@@ -491,10 +435,23 @@ class _TaskDialogState extends State<_TaskDialog> {
       return;
     }
 
-    setState(() {
-      _isDeleting = false;
-      _error = widget.controller.errorMessage;
-    });
+    setState(() => _isDeleting = false);
+    final message = deleteError is ApiException
+        ? deleteError.message
+        : deleteError.toString().replaceFirst('Exception: ', '');
+    await showDialog<void>(
+      context: context,
+      builder: (errorContext) => AlertDialog(
+        title: const Text('Löschen nicht möglich'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(errorContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   String get _deadlineLabel {
@@ -526,7 +483,20 @@ class _TaskDialogState extends State<_TaskDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextFormField(
+              if (_isEditing) ...[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.person_outline),
+                  title: Text(
+                    widget.task!.creatorName.isEmpty
+                        ? 'Unbekannt'
+                        : widget.task!.creatorName,
+                  ),
+                  subtitle: const Text('Erstellt von'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              TextFormField(
                   controller: _textController,
                   autofocus: !_isEditing,
                   keyboardType: TextInputType.multiline,
@@ -575,7 +545,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                       if (availableGroups.isEmpty)
                         Text(
                           _allGroups.isEmpty
-                              ? 'Noch keine Gruppen vorhanden.'
+                              ? 'Diesem Projekt sind noch keine Gruppen zugeordnet.'
                               : 'Alle vorhandenen Gruppen sind ausgewählt.',
                         )
                       else
@@ -599,24 +569,6 @@ class _TaskDialogState extends State<_TaskDialog> {
                             if (group != null) _toggleGroup(group, true);
                           },
                         ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: _isSaving || _isCreatingGroup
-                              ? null
-                              : _createAndAssignGroup,
-                          icon: _isCreatingGroup
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.add),
-                          label: const Text('Neue Gruppe'),
-                        ),
-                      ),
                       if (_assignedGroupIds.isEmpty)
                         const Padding(
                           padding: EdgeInsets.only(top: AppSpacing.xs),
@@ -642,14 +594,6 @@ class _TaskDialogState extends State<_TaskDialog> {
                                   ),
                                 )
                                 .toList(),
-                          ),
-                        ),
-                      if (_groupNotice != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text(
-                            _groupNotice!,
-                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
                     ],

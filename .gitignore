@@ -61,3 +61,4 @@ DECISIONS.md
 .vscode/settings.json
 test/task_dialog_test.dart
 test/task_dialog_test.dart
+lib/code_counter.py

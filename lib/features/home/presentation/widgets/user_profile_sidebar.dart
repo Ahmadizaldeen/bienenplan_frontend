@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../projects/application/project_controller.dart';
 import '../../../projects/presentation/project_list_widget.dart';
+import '../../../projects/presentation/project_archive_screen.dart';
 import '../../../settings/presentation/app_settings_dialog.dart';
 import '../../../user/application/user_controller.dart';
 import '../../../user/presentation/profile_avatar.dart';
@@ -251,6 +252,29 @@ class UserProfileSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              if (userController != null && projectController != null)
+                AnimatedBuilder(
+                  animation: userController!,
+                  builder: (context, _) =>
+                      userController!.currentUser?.isAdmin == true
+                      ? Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.admin_panel_settings_outlined,
+                            ),
+                            label: const Text('Admin-Bereich · Projektarchiv'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ProjectArchiveScreen(
+                                  projectController: projectController!,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

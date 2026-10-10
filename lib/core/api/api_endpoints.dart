@@ -53,12 +53,19 @@ class ApiEndpoints {
 
   // Projekt-Routen.
   static String get projects => "$baseUrl/projects";
+  static String get archivedProjects => "$projects/archived";
+  static String restoreProject(int id) => "$projects/$id/restore";
+  static String projectDetail(int id) => "$projects/$id";
+  static String projectGroups(int projectId) => "$projects/$projectId/groups";
+  static String projectGroup(int projectId, int groupId) =>
+      "${projectGroups(projectId)}/$groupId";
 
   // Behälter-Routen.
   static String get containers => "$baseUrl/containers";
 
   // Gruppen-Routen und Zuordnung von Gruppen zu Aufgaben.
   static String get groups => "$baseUrl/groups";
+  static String groupsForProject(int projectId) => projectGroups(projectId);
   static String groupsForTask(int taskId) => "$baseUrl/tasks/$taskId/groups";
   static String assignGroup(int taskId, int groupId) =>
       "$baseUrl/tasks/$taskId/assign/$groupId";

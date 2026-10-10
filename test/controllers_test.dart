@@ -10,7 +10,10 @@ import 'package:bienenplan_frontend/features/auth/data/auth_repository.dart';
 import 'package:bienenplan_frontend/features/projects/application/project_controller.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_local_store.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_model.dart';
+import 'package:bienenplan_frontend/features/projects/data/project_group_model.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
+import 'package:bienenplan_frontend/features/projects/presentation/project_list_widget.dart';
+import 'package:bienenplan_frontend/features/user/data/user_model.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
@@ -251,10 +254,27 @@ class FakeRegisterRepository implements AuthRepositoryContract {
 class FakeProjectRepository implements ProjectRepositoryContract {
   bool fetchCalled = false;
   bool createCalled = false;
+  int? updatedId;
+  int? archivedId;
+  String? updatedName;
   String? createdName;
   final List<Project> _list = [
-    const Project(id: 1, name: 'BienenPlan Backend'),
-    const Project(id: 2, name: 'BienenPlan App'),
+    const Project(
+      id: 1,
+      name: 'BienenPlan Backend',
+      isOwner: true,
+      canEdit: true,
+      canDelete: true,
+      canManageGroups: true,
+    ),
+    const Project(
+      id: 2,
+      name: 'BienenPlan App',
+      isOwner: true,
+      canEdit: true,
+      canDelete: true,
+      canManageGroups: true,
+    ),
   ];
 
   @override
@@ -267,8 +287,63 @@ class FakeProjectRepository implements ProjectRepositoryContract {
   Future<void> createProject(String name) async {
     createCalled = true;
     createdName = name;
-    _list.add(Project(id: _list.length + 1, name: name));
+    _list.add(
+      Project(
+        id: _list.length + 1,
+        name: name,
+        isOwner: true,
+        canEdit: true,
+        canDelete: true,
+        canManageGroups: true,
+      ),
+    );
   }
+
+  @override
+  Future<void> updateProject(int id, String name) async {
+    updatedId = id;
+    updatedName = name;
+    final index = _list.indexWhere((project) => project.id == id);
+    if (index >= 0) {
+      _list[index] = Project(
+        id: id,
+        name: name,
+        isOwner: _list[index].isOwner,
+        canEdit: _list[index].canEdit,
+        canDelete: _list[index].canDelete,
+        canManageGroups: _list[index].canManageGroups,
+      );
+    }
+  }
+
+  @override
+  Future<void> archiveProject(int id) async {
+    archivedId = id;
+    _list.removeWhere((project) => project.id == id);
+  }
+
+  @override
+  Future<List<ProjectGroup>> fetchProjectGroups(int projectId) async =>
+      const [];
+
+  @override
+  Future<List<ProjectGroup>> fetchAvailableGroups() async => const [];
+
+  @override
+  Future<void> assignGroup(int projectId, int groupId) async {}
+
+  @override
+  Future<void> removeGroup(int projectId, int groupId) async {}
+
+  @override
+  Future<List<GroupUser>> fetchUsers() async => const [];
+
+  @override
+  Future<void> createGroup(
+    int projectId,
+    String name,
+    List<int> userIds,
+  ) async {}
 }
 
 class ExceptionProjectRepository implements ProjectRepositoryContract {
@@ -284,6 +359,39 @@ class ExceptionProjectRepository implements ProjectRepositoryContract {
   Future<void> createProject(String name) async {
     throw exceptionToThrow;
   }
+
+  @override
+  Future<void> updateProject(int id, String name) async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<void> archiveProject(int id) async => throw exceptionToThrow;
+
+  @override
+  Future<List<ProjectGroup>> fetchProjectGroups(int projectId) async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<List<ProjectGroup>> fetchAvailableGroups() async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<void> assignGroup(int projectId, int groupId) async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<void> removeGroup(int projectId, int groupId) async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<List<GroupUser>> fetchUsers() async => throw exceptionToThrow;
+
+  @override
+  Future<void> createGroup(
+    int projectId,
+    String name,
+    List<int> userIds,
+  ) async => throw exceptionToThrow;
 }
 
 class FakeProjectLocalStore implements ProjectLocalStoreContract {
@@ -529,7 +637,7 @@ void main() {
 
     final success = await controller.createProject('Neues Bienen-Projekt');
 
-    expect(success, isTrue);
+    expect(success, ProjectMutationResult.succeeded);
     expect(repository.createCalled, isTrue);
     expect(repository.createdName, 'Neues Bienen-Projekt');
     expect(controller.projects.length, 3);
@@ -547,9 +655,94 @@ void main() {
 
     final success = await controller.createProject('   ');
 
-    expect(success, isFalse);
+    expect(success, ProjectMutationResult.failed);
     expect(repository.createCalled, isFalse);
     expect(controller.errorMessage, 'Projektname darf nicht leer sein.');
+  });
+
+  test('ProjectController updates a project and reloads', () async {
+    final repository = FakeProjectRepository();
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: FakeProjectLocalStore(),
+    );
+
+    final success = await controller.updateProject(2, 'Neuer Name');
+
+    expect(success, ProjectMutationResult.succeeded);
+    expect(repository.updatedId, 2);
+    expect(repository.updatedName, 'Neuer Name');
+    expect(controller.projects[1].name, 'Neuer Name');
+    expect(controller.isLoading, isFalse);
+    expect(controller.errorMessage, isNull);
+  });
+
+  test(
+    'ProjectController archives a project and selects an active fallback',
+    () async {
+      final repository = FakeProjectRepository();
+      final controller = ProjectController(
+        projectRepository: repository,
+        projectLocalStore: FakeProjectLocalStore(),
+      );
+      await controller.loadProjects();
+
+      final success = await controller.archiveProject(1);
+
+      expect(success, ProjectMutationResult.succeeded);
+      expect(repository.archivedId, 1);
+      expect(controller.projects.map((project) => project.id), [2]);
+      expect(controller.selectedProject?.id, 2);
+      expect(controller.isLoading, isFalse);
+      expect(controller.errorMessage, isNull);
+    },
+  );
+
+  testWidgets('project settings open the shared create and edit presentation', (
+    tester,
+  ) async {
+    final repository = FakeProjectRepository();
+    final controller = ProjectController(
+      projectRepository: repository,
+      projectLocalStore: FakeProjectLocalStore(),
+    );
+    await controller.loadProjects();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ProjectListWidget(controller: controller)),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Projekt bearbeiten').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Projekt bearbeiten'), findsOneWidget);
+    expect(find.text('Projektgruppen verwalten'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), 'Überarbeitet');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(controller.projects.first.name, 'Überarbeitet');
+
+    await tester.tap(find.text('Projekt hinzufügen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Neues Projekt'), findsOneWidget);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Projekt bearbeiten').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Projekt archivieren'));
+    await tester.tap(find.text('Projekt archivieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Projekt archivieren?'), findsOneWidget);
+    expect(find.textContaining('spätere Statistiken'), findsOneWidget);
+    await tester.tap(find.text('Archivieren').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.projects.map((project) => project.id), [2]);
+    expect(find.text('BienenPlan Backend'), findsNothing);
+    expect(find.text('BienenPlan App'), findsOneWidget);
   });
 
   test('ProjectController selectProject toggles active project', () async {

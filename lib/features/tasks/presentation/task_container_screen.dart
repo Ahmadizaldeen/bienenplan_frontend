@@ -137,10 +137,19 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _showCreateTaskDialog(int containerId) async {
+    int? projectId = widget.projectId;
+    // Ohne aktive Projektauswahl bestimmt der Container den Scope der Gruppen.
+    for (final container in _controller.extraContainers) {
+      if (container.id == containerId) {
+        projectId ??= container.projectId;
+        break;
+      }
+    }
     final success = await showTaskDialog(
       context,
       controller: _controller,
       containerId: containerId,
+      projectId: projectId,
     );
     if (!mounted) return;
     if (success) {

@@ -8,7 +8,6 @@ import '../data/task_attachment.dart';
 import '../data/task_attachment_repository.dart';
 import '../data/group_model.dart';
 import '../data/group_repository.dart';
-import '../../user/data/user_model.dart';
 
 class TaskController extends ChangeNotifier {
   TaskController({
@@ -19,7 +18,8 @@ class TaskController extends ChangeNotifier {
   }) : _taskRepository = taskRepository ?? TaskRepository(),
        _containerRepository = containerRepository ?? ContainerRepository(),
        _groupRepository = groupRepository ?? GroupRepository(),
-       _attachmentRepository = attachmentRepository ?? TaskAttachmentRepository();
+       _attachmentRepository =
+           attachmentRepository ?? TaskAttachmentRepository();
 
   final TaskRepositoryContract _taskRepository;
   final ContainerRepositoryContract _containerRepository;
@@ -44,6 +44,8 @@ class TaskController extends ChangeNotifier {
   String? _errorMessage;
   List<Task> _tasks = const [];
   List<container_model.Container> _extraContainers = const [];
+  bool _disposed = false;
+  int _loadVersion = 0;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -52,6 +54,8 @@ class TaskController extends ChangeNotifier {
       List.unmodifiable(_extraContainers);
 
   Future<void> loadTasks() async {
+    if (_disposed) return;
+    final version = ++_loadVersion;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -61,14 +65,19 @@ class TaskController extends ChangeNotifier {
         _taskRepository.fetchTasks(),
         _containerRepository.fetchContainers(),
       ]);
+      if (_disposed || version != _loadVersion) return;
       _tasks = results[0] as List<Task>;
       _extraContainers = results[1] as List<container_model.Container>;
     } catch (error) {
+      if (_disposed || version != _loadVersion) return;
       _errorMessage = _messageOf(error);
       _tasks = const [];
+      _extraContainers = const [];
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (version == _loadVersion) {
+        _isLoading = false;
+        if (!_disposed) notifyListeners();
+      }
     }
   }
 
@@ -101,13 +110,13 @@ class TaskController extends ChangeNotifier {
     return _guard<Task?>(() => _taskRepository.fetchTaskDetail(taskId), null);
   }
 
-  Future<bool> deleteTask(int taskId) {
+  Future<bool> deleteTask(int taskId) async {
     _errorMessage = null;
-    return _guard(() async {
-      await _taskRepository.deleteTask(taskId);
-      await loadTasks();
-      return true;
-    }, false);
+    // API-Fehler bewusst weitergeben: Der Dialog zeigt die Ablehnung samt
+    // Backend-Meldung, statt sie auf einen booleschen Fallback zu reduzieren.
+    await _taskRepository.deleteTask(taskId);
+    await loadTasks();
+    return true;
   }
 
   Future<bool> updateTask(
@@ -155,8 +164,11 @@ class TaskController extends ChangeNotifier {
     }, null);
   }
 
-  Future<List<Group>> fetchAllGroups() {
-    return _guard(_groupRepository.fetchAllGroups, const <Group>[]);
+  Future<List<Group>> fetchGroupsForProject(int projectId) {
+    return _guard(
+      () => _groupRepository.fetchGroupsForProject(projectId),
+      const <Group>[],
+    );
   }
 
   Future<List<Group>> fetchGroupsForTask(int taskId) {
@@ -164,31 +176,6 @@ class TaskController extends ChangeNotifier {
       () => _groupRepository.fetchGroupsForTask(taskId),
       const <Group>[],
     );
-  }
-
-  Future<List<GroupUser>?> fetchAllUsers() {
-    return _guard<List<GroupUser>?>(_groupRepository.fetchAllUsers, null);
-  }
-
-  Future<Group?> createGroup(
-    String name, {
-    List<int> userIds = const [],
-  }) async {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      _errorMessage = 'Der Gruppenname darf nicht leer sein.';
-      notifyListeners();
-      return null;
-    }
-
-    return _guard<Group?>(() async {
-      final group = await _groupRepository.createGroup(
-        trimmedName,
-        userIds: userIds,
-      );
-      _errorMessage = null;
-      return group;
-    }, null);
   }
 
   Future<bool> assignGroupToTask(int taskId, int groupId) {
@@ -296,5 +283,11 @@ class TaskController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

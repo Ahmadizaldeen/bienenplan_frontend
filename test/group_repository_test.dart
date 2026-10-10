@@ -10,7 +10,7 @@ class _FakeApiClient extends ApiClient {
   @override
   Future<dynamic> get(String url) async {
     requestedUrls.add(url);
-    if (url == ApiEndpoints.groups) {
+    if (url == ApiEndpoints.groupsForProject(4)) {
       return {
         'groups': [
           {'id': 1, 'name': 'Team Alpha', 'personal_user_id': null},
@@ -44,7 +44,8 @@ void main() {
 
   test('uses personal_user_name as label, keeps team groups', () async {
     final apiClient = _FakeApiClient();
-    final groups = await GroupRepository(apiClient: apiClient).fetchAllGroups();
+    final groups = await GroupRepository(apiClient: apiClient)
+        .fetchGroupsForProject(4);
 
     expect(groups.map((group) => group.label), [
       'Max Mustermann',
@@ -52,7 +53,6 @@ void main() {
       'Team Alpha',
     ]);
     expect(groups.where((group) => group.isPersonal).length, 2);
-    // Ein Request für alle Gruppen, keine Zusatz-Requests pro Gruppe.
-    expect(apiClient.requestedUrls, [ApiEndpoints.groups]);
+    expect(apiClient.requestedUrls, [ApiEndpoints.groupsForProject(4)]);
   });
 }
