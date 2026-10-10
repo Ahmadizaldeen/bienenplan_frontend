@@ -9,7 +9,7 @@ import 'package:bienenplan_frontend/features/tasks/data/group_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/data/task_model.dart';
 import 'package:bienenplan_frontend/features/tasks/data/task_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/presentation/task_dialog.dart';
-import 'package:bienenplan_frontend/features/user/data/user_model.dart';
+import 'package:bienenplan_frontend/core/api/api_exception.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bienenplan_frontend/features/subtasks/data/subtask_model.dart';
@@ -26,6 +26,10 @@ class _UnexpectedSubtaskRepository extends SubtaskRepository {
 }
 
 class _DeletingTaskRepository implements TaskRepositoryContract {
+  _DeletingTaskRepository({this.deleteError});
+
+  final Object? deleteError;
+
   final List<Task> tasks = [
     Task(
       id: 7,
@@ -50,6 +54,7 @@ class _DeletingTaskRepository implements TaskRepositoryContract {
 
   @override
   Future<void> deleteTask(int taskId) async {
+    if (deleteError != null) throw deleteError!;
     tasks.removeWhere((task) => task.id == taskId);
   }
 
@@ -100,19 +105,10 @@ class _FakeContainerRepository implements ContainerRepositoryContract {
 
 class _FakeGroupRepository implements GroupRepositoryContract {
   @override
-  Future<List<Group>> fetchAllGroups() async => const [];
+  Future<List<Group>> fetchGroupsForProject(int projectId) async => const [];
 
   @override
   Future<List<Group>> fetchGroupsForTask(int taskId) async => const [];
-
-  @override
-  Future<List<GroupUser>> fetchAllUsers() async => const [];
-
-  @override
-  Future<Group> createGroup(
-    String name, {
-    List<int> userIds = const [],
-  }) async => Group(id: 1, name: name);
 
   @override
   Future<void> assignGroupToTask(int taskId, int groupId) async {}
@@ -151,6 +147,8 @@ void main() {
 
     await tester.tap(find.text('Dialog öffnen'));
     await tester.pumpAndSettle();
+    expect(find.text('Erstellt von'), findsOneWidget);
+    expect(find.text('Tester'), findsOneWidget);
     expect(find.text('Teilaufgaben'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Teilaufgaben')).dy,
@@ -171,6 +169,54 @@ void main() {
 
     expect(taskRepository.tasks, isEmpty);
     expect(find.text('Aufgabe bearbeiten'), findsNothing);
+  });
+
+  testWidgets('shows friendly message when user cannot delete a task', (
+    tester,
+  ) async {
+    const deleteError =
+        'Du darfst diese Task nicht löschen. Das dürfen nur der Ersteller, der Container-Inhaber oder der Projekt-Owner.';
+    final taskRepository = _DeletingTaskRepository(
+      deleteError: const ApiException(statusCode: 403, message: deleteError),
+    );
+    final controller = TaskController(
+      taskRepository: taskRepository,
+      containerRepository: _FakeContainerRepository(),
+      groupRepository: _FakeGroupRepository(),
+    );
+    addTearDown(controller.dispose);
+    final task = taskRepository.tasks.single;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showTaskDialog(
+                context,
+                controller: controller,
+                containerId: task.containerId,
+                task: task,
+              ),
+              child: const Text('Dialog öffnen'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Dialog öffnen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(deleteError), findsOneWidget);
+    expect(find.text('Löschen nicht möglich'), findsOneWidget);
+    expect(find.widgetWithText(AlertDialog, deleteError), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(taskRepository.tasks, hasLength(1));
   });
 
   testWidgets('new task shows subtasks without loading before saving', (

@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isProfileExpanded = false;
   final _homeContentKey = GlobalKey();
+  late int _groupsRevision;
 
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
   // der Refresh-Button in ProjectOverviewHeader dieselben Daten neu laden
@@ -46,11 +47,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _groupsRevision = _projectController.groupsRevision;
+    _projectController.addListener(_handleProjectUpdate);
     _refreshAll();
+  }
+
+  void _handleProjectUpdate() {
+    if (!mounted || _groupsRevision == _projectController.groupsRevision) {
+      return;
+    }
+    _groupsRevision = _projectController.groupsRevision;
+    // Gruppenänderungen können Sichtbarkeit und Aufgabenzuweisungen ändern.
+    // Die Revision verhindert, dass die Ladebenachrichtigungen neue Loads starten.
+    _taskController.loadTasks();
+    _projectController.loadProjects();
   }
 
   @override
   void dispose() {
+    _projectController.removeListener(_handleProjectUpdate);
     // Nur aufräumen, wenn dieser Screen die Controller selbst erzeugt hat.
     // Von außen injizierte Controller gehören dem Owner und dürfen hier
     // nicht disposed werden.

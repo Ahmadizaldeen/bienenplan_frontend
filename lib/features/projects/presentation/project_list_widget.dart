@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../application/project_controller.dart';
 import '../data/project_model.dart';
+import 'project_editor_dialog.dart';
 
 class ProjectListWidget extends StatefulWidget {
   const ProjectListWidget({super.key, this.controller});
@@ -36,70 +37,36 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
     super.dispose();
   }
 
-  Future<void> _showCreateProjectDialog() async {
-    final textController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final created = await showDialog<bool>(
+  Future<void> _showProjectEditor(Project? project) async {
+    final result = await showDialog<ProjectEditorResult>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Neues Projekt'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: textController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Projektname',
-                hintText: 'z.B. Marketing Q3',
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Bitte geben Sie einen Projektnamen ein.';
-                }
-                return null;
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.of(dialogContext).pop(true);
-                }
-              },
-              child: const Text('Erstellen'),
-            ),
-          ],
-        );
-      },
+      builder: (context) =>
+          ProjectEditorDialog(controller: _controller, project: project),
     );
-
-    if (created == true && mounted) {
-      final success = await _controller.createProject(textController.text);
-      if (!mounted) return;
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Projekt erfolgreich erstellt!')),
-        );
-      } else if (_controller.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _controller.errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.onError),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+    if (result != null && mounted) {
+      final refreshFailed =
+          result == ProjectEditorResult.savedRefreshFailed ||
+          result == ProjectEditorResult.archivedRefreshFailed;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(switch (result) {
+            ProjectEditorResult.saved =>
+              project == null ? 'Projekt erstellt.' : 'Projekt gespeichert.',
+            ProjectEditorResult.archived => 'Projekt archiviert.',
+            ProjectEditorResult.savedRefreshFailed =>
+              'Projekt gespeichert, aber die Projektliste konnte nicht aktualisiert werden: ${_controller.errorMessage}',
+            ProjectEditorResult.archivedRefreshFailed =>
+              'Projekt archiviert, aber die Projektliste konnte nicht aktualisiert werden: ${_controller.errorMessage}',
+          }),
+          action: refreshFailed
+              ? SnackBarAction(
+                  label: 'Neu laden',
+                  onPressed: _controller.loadProjects,
+                )
+              : null,
+        ),
+      );
     }
-    textController.dispose();
   }
 
   @override
@@ -127,6 +94,12 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
             children: [
               if (_controller.errorMessage != null) ...[
                 GlassContainer(child: Text(_controller.errorMessage!)),
+                TextButton(
+                  onPressed: _controller.isLoading
+                      ? null
+                      : _controller.loadProjects,
+                  child: const Text('Projektliste erneut laden'),
+                ),
                 const SizedBox(height: AppSpacing.sm),
               ],
               if (_controller.isLoading)
@@ -139,6 +112,12 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
                   project: project,
                   active: project.id == _controller.selectedProject?.id,
                   onSelect: () => _controller.selectProject(project.id),
+                  onEditProject:
+                      project.canEdit ||
+                          project.canDelete ||
+                          project.canManageGroups
+                      ? () => _showProjectEditor(project)
+                      : null,
                 ),
               const SizedBox(height: AppSpacing.xs),
               SizedBox(
@@ -146,7 +125,7 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
                 child: OutlinedButton.icon(
                   onPressed: _controller.isLoading
                       ? null
-                      : _showCreateProjectDialog,
+                      : () => _showProjectEditor(null),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Projekt hinzufügen'),
                 ),
@@ -164,11 +143,13 @@ class _ProjectTile extends StatelessWidget {
     required this.project,
     required this.active,
     required this.onSelect,
+    required this.onEditProject,
   });
 
   final Project project;
   final bool active;
   final VoidCallback onSelect;
+  final VoidCallback? onEditProject;
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +208,12 @@ class _ProjectTile extends StatelessWidget {
                 Icons.arrow_forward_ios_rounded,
                 size: 14,
                 color: scheme.primary,
+              ),
+            if (onEditProject != null)
+              IconButton(
+                tooltip: 'Projekt bearbeiten',
+                onPressed: onEditProject,
+                icon: const Icon(Icons.settings_outlined),
               ),
           ],
         ),

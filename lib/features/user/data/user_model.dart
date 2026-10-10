@@ -3,12 +3,14 @@ class AppUser {
   final String name;
   final String email;
   final String? picture;
+  final bool isAdmin;
 
   const AppUser({
     required this.id,
     required this.name,
     required this.email,
     this.picture,
+    this.isAdmin = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,10 @@ class AppUser {
       name: json['name'] as String,
       email: json['email'] as String,
       picture: json['picture'] as String?,
+      isAdmin:
+          json['is_admin'] == true ||
+          json['is_admin'] == 1 ||
+          json['is_admin'] == '1',
     );
   }
 }
