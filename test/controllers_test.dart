@@ -60,6 +60,13 @@ class ExceptionAuthRepository implements AuthRepositoryContract {
 }
 
 class FakeTaskRepository implements TaskRepositoryContract {
+  @override
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) async {}
+
   bool loadCalled = false;
   bool updateCalled = false;
   bool deleteCalled = false;
@@ -128,6 +135,13 @@ class FakeTaskRepository implements TaskRepositoryContract {
 /// Simuliert das Backend: `createTask` speichert die Aufgabe, danach liefert
 /// `fetchTasks` sie zusammen mit den übrigen Aufgaben des Containers zurück.
 class _CreateAwareTaskRepository implements TaskRepositoryContract {
+  @override
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) async {}
+
   bool createTaskCalled = false;
   final List<Task> _tasks = [
     Task(
@@ -252,6 +266,17 @@ class FakeRegisterRepository implements AuthRepositoryContract {
 }
 
 class FakeProjectRepository implements ProjectRepositoryContract {
+  @override
+  Future<List<GroupUser>> fetchGroupUsers(int groupId) async => const [];
+
+  @override
+  Future<void> updateGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  ) async {}
+
   bool fetchCalled = false;
   bool createCalled = false;
   int? updatedId;
@@ -349,6 +374,17 @@ class FakeProjectRepository implements ProjectRepositoryContract {
 class ExceptionProjectRepository implements ProjectRepositoryContract {
   final Exception exceptionToThrow;
   ExceptionProjectRepository(this.exceptionToThrow);
+  @override
+  Future<List<GroupUser>> fetchGroupUsers(int groupId) async =>
+      throw exceptionToThrow;
+
+  @override
+  Future<void> updateGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  ) async => throw exceptionToThrow;
 
   @override
   Future<List<Project>> fetchProjects() async {

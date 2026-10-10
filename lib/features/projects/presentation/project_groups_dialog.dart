@@ -87,15 +87,28 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
     });
   }
 
-  Future<void> _createGroup() async {
-    if (_isLoading || _busyGroupId != null || _loadFailed) return;
+  Future<void> _createGroup() => _openGroupEditor();
+
+  Future<void> _openGroupEditor([ProjectGroup? group]) async {
+    if (_isLoading ||
+        _busyGroupId != null ||
+        _loadFailed ||
+        !widget.project.canManageGroups) {
+      return;
+    }
     setState(() {
       _error = null;
       _isLoading = true;
     });
     final List<GroupUser> users;
+    final List<GroupUser> members;
     try {
-      users = await widget.controller.fetchUsers();
+      final results = await Future.wait([
+        widget.controller.fetchUsers(),
+        if (group != null) widget.controller.fetchGroupUsers(group.id),
+      ]);
+      users = results[0];
+      members = group == null ? const [] : results[1];
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -111,18 +124,29 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
       return;
     }
 
-    final request = await showDialog<_NewProjectGroup>(
+    final request = await showDialog<_ProjectGroupRequest>(
       context: context,
-      builder: (context) => _NewProjectGroupDialog(users: users),
+      builder: (context) => _ProjectGroupEditorDialog(
+        users: users,
+        group: group,
+        userIds: members.map((user) => user.id).toSet(),
+      ),
     );
     if (request == null || !mounted) return;
 
     setState(() => _isLoading = true);
-    final success = await widget.controller.createProjectGroup(
-      widget.project.id,
-      request.name,
-      request.userIds,
-    );
+    final success = group == null
+        ? await widget.controller.createProjectGroup(
+            widget.project.id,
+            request.name,
+            request.userIds,
+          )
+        : await widget.controller.updateProjectGroup(
+            widget.project.id,
+            group.id,
+            request.name,
+            request.userIds,
+          );
     if (!mounted) return;
     if (!success) {
       setState(() {
@@ -149,7 +173,10 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: OutlinedButton.icon(
-                      onPressed: _busyGroupId == null && !_loadFailed
+                      onPressed:
+                          _busyGroupId == null &&
+                              !_loadFailed &&
+                              widget.project.canManageGroups
                           ? _createGroup
                           : null,
                       icon: const Icon(Icons.add),
@@ -182,11 +209,18 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
                         itemBuilder: (context, index) {
                           final group = _groups[index];
                           final isBusy = _busyGroupId == group.id;
+                          final scope = group.isGlobal
+                              ? 'Global'
+                              : 'Nur dieses Projekt';
+                          final count = group.memberCount;
+                          final membersLabel = count == 1
+                              ? 'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar'
+                              : '$count Teilnehmer';
                           return CheckboxListTile(
                             value: _assignedIds.contains(group.id),
                             title: Text(group.name),
                             subtitle: Text(
-                              group.isGlobal ? 'Global' : 'Nur dieses Projekt',
+                              count == null ? scope : '$scope\n$membersLabel',
                             ),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
@@ -198,8 +232,22 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
                                       strokeWidth: 2,
                                     ),
                                   )
+                                : !group.isGlobal &&
+                                      group.projectId == widget.project.id &&
+                                      widget.project.canManageGroups
+                                ? IconButton(
+                                    tooltip: 'Gruppe bearbeiten',
+                                    icon: const Icon(Icons.edit_outlined),
+                                    onPressed:
+                                        _busyGroupId != null || _loadFailed
+                                        ? null
+                                        : () => _openGroupEditor(group),
+                                  )
                                 : null,
-                            onChanged: _busyGroupId != null || _loadFailed
+                            onChanged:
+                                _busyGroupId != null ||
+                                    _loadFailed ||
+                                    !widget.project.canManageGroups
                                 ? null
                                 : (value) =>
                                       _setAssigned(group, value ?? false),
@@ -220,27 +268,47 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
   }
 }
 
-class _NewProjectGroup {
-  const _NewProjectGroup({required this.name, required this.userIds});
+class _ProjectGroupRequest {
+  const _ProjectGroupRequest({required this.name, required this.userIds});
 
   final String name;
   final List<int> userIds;
 }
 
-class _NewProjectGroupDialog extends StatefulWidget {
-  const _NewProjectGroupDialog({required this.users});
+class _ProjectGroupEditorDialog extends StatefulWidget {
+  const _ProjectGroupEditorDialog({
+    required this.users,
+    this.group,
+    this.userIds = const {},
+  });
 
   final List<GroupUser> users;
+  final ProjectGroup? group;
+  final Set<int> userIds;
 
   @override
-  State<_NewProjectGroupDialog> createState() => _NewProjectGroupDialogState();
+  State<_ProjectGroupEditorDialog> createState() =>
+      _ProjectGroupEditorDialogState();
 }
 
-class _NewProjectGroupDialogState extends State<_NewProjectGroupDialog> {
+class _ProjectGroupEditorDialogState extends State<_ProjectGroupEditorDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final Set<int> _userIds = {};
+  late final TextEditingController _nameController;
+  late final Set<int> _userIds;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.group?.name ?? '');
+    _userIds = widget.userIds.intersection(
+      widget.users.map((user) => user.id).toSet(),
+    );
+    if (_userIds.length != widget.userIds.length) {
+      _error =
+          'Einige Mitglieder sind nicht mehr verfügbar. Bitte Auswahl prüfen.';
+    }
+  }
 
   @override
   void dispose() {
@@ -248,25 +316,49 @@ class _NewProjectGroupDialogState extends State<_NewProjectGroupDialog> {
     super.dispose();
   }
 
+  String? get _rightsWarning {
+    final oldIds = widget.userIds;
+    final changes =
+        widget.group != null &&
+        _userIds.isNotEmpty &&
+        ((oldIds.length == 1) != (_userIds.length == 1) ||
+            (oldIds.length == 1 &&
+                _userIds.length == 1 &&
+                oldIds.single != _userIds.single));
+    if (!changes) return null;
+    return _userIds.length == 1
+        ? 'Diese Änderung gibt dem ausgewählten Benutzer Zusatzrechte bei '
+              'zugewiesenen Aufgaben: Inhalte und Frist bearbeiten, lokale Gruppen '
+              'zuweisen und Unteraufgaben erstellen. Bisherige Zusatzrechte dieser '
+              'Gruppe entfallen für entfernte Mitglieder. Andere Rollen bleiben erhalten.'
+        : 'Diese Änderung entzieht die Zusatzrechte dieser Ein-Personen-Gruppe: '
+              'Inhalte und Frist bearbeiten, lokale Gruppen zuweisen und Unteraufgaben '
+              'erstellen. Rechte aus anderen Rollen oder Zuweisungen bleiben erhalten.';
+  }
+
   void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_userIds.isEmpty) {
       setState(() => _error = 'Bitte mindestens einen Benutzer auswählen.');
       return;
     }
-    Navigator.of(context).pop(
-      _NewProjectGroup(
-        name: _nameController.text.trim(),
-        userIds: _userIds.toList()..sort(),
-      ),
-    );
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final enteredName = _nameController.text.trim();
+    final name = enteredName.isNotEmpty
+        ? enteredName
+        : widget.users.firstWhere((user) => user.id == _userIds.single).name;
+    Navigator.of(
+      context,
+    ).pop(_ProjectGroupRequest(name: name, userIds: _userIds.toList()..sort()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final rightsWarning = _rightsWarning;
     return AlertDialog(
       scrollable: true,
-      title: const Text('Neue Gruppe erstellen'),
+      title: Text(
+        widget.group == null ? 'Neue Gruppe erstellen' : 'Gruppe bearbeiten',
+      ),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -279,8 +371,17 @@ class _NewProjectGroupDialogState extends State<_NewProjectGroupDialog> {
                 controller: _nameController,
                 autofocus: true,
                 maxLength: 100,
-                decoration: const InputDecoration(labelText: 'Gruppenname'),
-                validator: (value) => value == null || value.trim().isEmpty
+                decoration: InputDecoration(
+                  labelText: _userIds.length == 1
+                      ? 'Gruppenname (optional)'
+                      : 'Gruppenname',
+                  helperText: _userIds.length == 1
+                      ? 'Ohne Gruppennamen wird der Benutzername verwendet.'
+                      : null,
+                ),
+                validator: (value) =>
+                    _userIds.length != 1 &&
+                        (value == null || value.trim().isEmpty)
                     ? 'Bitte einen Gruppennamen eingeben.'
                     : null,
               ),
@@ -312,6 +413,11 @@ class _NewProjectGroupDialogState extends State<_NewProjectGroupDialog> {
                   },
                 ),
               ),
+              if (rightsWarning != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Text(rightsWarning),
+                ),
               if (_error != null)
                 Text(
                   _error!,
@@ -326,7 +432,10 @@ class _NewProjectGroupDialogState extends State<_NewProjectGroupDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Abbrechen'),
         ),
-        ElevatedButton(onPressed: _submit, child: const Text('Erstellen')),
+        ElevatedButton(
+          onPressed: _submit,
+          child: Text(widget.group == null ? 'Erstellen' : 'Speichern'),
+        ),
       ],
     );
   }

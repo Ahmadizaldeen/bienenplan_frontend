@@ -88,6 +88,12 @@ werden Gruppenänderungen sofort über die API übernommen; beim Erstellen werde
 sie gesammelt und nach dem Anlegen der Aufgabe zugewiesen.
 Bestehende Aufgaben lassen sich aus dem Dialog nach einer Bestätigung löschen.
 
+Mitglieder einer einer Aufgabe zugeordneten Projektgruppe dürfen Datei-Anhänge
+hochladen und herunterladen, ohne die Aufgabe selbst bearbeiten zu dürfen.
+Uploads und Downloads verwenden eigene Anhang-Endpunkte. Beim Speichern ohne
+Änderungen an Aufgabentext, Status oder Frist wird kein Aufgaben-Update gesendet;
+das gilt auch für Wiederholungen eines fehlgeschlagenen Anhang-Uploads.
+
 Nach Änderungen an Projektgruppen lädt die Home-Ansicht Projekte, Container und
 Aufgaben neu, da sich auch Zugriffsrechte und Aufgabenzuweisungen ändern können.
 Fehlgeschlagene Gruppenabfragen werden im Dialog angezeigt und können erneut
@@ -128,6 +134,40 @@ werden; die Aufgabenauswahl lädt nur zugeordnete Gruppen über
 `GET /api/projects/{projectId}/groups`. Beim Entfernen einer Projektgruppe entfernt
 das Backend auch ihre Gruppenzuweisungen zu Aufgaben dieses Projekts.
 
+Bei genau einem ausgewählten Benutzer ist der Gruppenname optional: Ein leerer
+Name wird beim Erstellen durch den Benutzernamen ersetzt; ein eingegebener Name
+wird beibehalten. Bei mehreren Benutzern ist ein Gruppenname erforderlich.
+Auch mit einem Teilnehmer entsteht eine normale lokale Projektgruppe, keine
+persönliche Benutzergruppe.
+
+Lokale Gruppen lassen sich im Projektgruppen-Dialog über das Stift-Symbol
+bearbeiten: Name und vorausgewählte Mitglieder können vom Projekt-Eigentümer
+oder App-Admin geändert werden. Globale Gruppen werden dort nicht bearbeitet.
+Die API speichert Name und Mitglieder gemeinsam über
+`PUT /api/projects/{projectId}/groups/{groupId}`.
+
+Gruppenlisten liefern `member_count` als Anzahl aktiver Mitglieder. Bei genau
+einem aktiven Mitglied darf dieses zusätzlich Titel, Beschreibung und Frist der seiner Gruppe
+zugewiesenen Aufgaben ändern. Sobald ein zweites aktives Mitglied hinzukommt,
+entfallen diese Zusatzrechte. Das Backend liefert dafür
+`can_edit` und `can_edit_title_deadline`; der Aufgaben-Dialog gibt das normale
+mehrzeilige Feld „Aufgabe“ inklusive Beschreibung und die Friststeuerung frei.
+Titel und Beschreibung werden wie bisher aus dem Freitext abgeleitet und über
+den normalen Aufgaben-Endpunkt gespeichert. `can_manage_local_groups` erlaubt
+zusätzlich lokale Gruppen desselben Projekts zuzuweisen und zu entfernen;
+globale Gruppen sind für diese eingeschränkte Auswahl gesperrt. Unteraufgaben
+können hinzugefügt und abgehakt werden. Task-Löschrechte bleiben unverändert.
+Wer seine letzte Ein-Personen-Zuweisung entfernt, verliert diese Zusatzrechte.
+Der Aufgaben-Dialog enthält eine aufklappbare Übersicht „Deine Rechte“.
+Beim Entfernen der eigenen letzten Ein-Personen-Zuweisung erscheint eine
+Bestätigung; nach erfolgreichem Entfernen wird die Aufgabenliste aktualisiert
+und der Dialog geschlossen, damit keine veralteten Rechte angezeigt werden.
+Die API liefert dafür `member_count` und `is_current_user_member` in Projektgruppen.
+Die Gruppenbearbeitung zeigt vor dem Speichern einen Hinweis, wenn eine
+Mitgliederänderung Ein-Personen-Zusatzrechte erteilt, entzieht oder überträgt.
+Reine Statusänderungen verwenden weiterhin
+ihren eigenen Endpunkt.
+
 Persönliche Gruppen erkennt das Aufgabenmodell an `personal_user_id`
 (Fallback: Name „Personal user {id}“) und zeigt `personal_user_name` als
 Anzeigenamen an. Gruppenlisten werden nach diesem Anzeigenamen sortiert.
@@ -143,9 +183,12 @@ werden.“ Es erfolgen keine Subtask-Anfragen. Aufgabenkarten zeigen keine Teila
 
 Der Bereich startet eingeklappt und lädt bei gespeicherten Aufgaben beim ersten
 Öffnen. Reihenfolge: ID.
-Container-/Projekt-Eigentümer können hinzufügen; Subtask-Ersteller und Eigentümer
-können umbenennen oder nach Bestätigung löschen. Zugewiesene Gruppenmitglieder
-können abhaken. Die API liefert die jeweiligen Berechtigungen.
+Admin, Projekt-Eigentümer, berechtigte Task-Ersteller und zugewiesene
+Ein-Personen-Gruppen können hinzufügen. Normale Gruppenmitglieder mit Task-Zugriff
+können Titel ändern und abhaken, aber nicht erstellen oder löschen.
+Admin, Projekt-Eigentümer und Task-Ersteller behalten ihre Löschrechte;
+berechtigte Ein-Personen-Zuweisungen dürfen eigene Unteraufgaben löschen.
+Die API liefert die jeweiligen Berechtigungen.
 
 Änderungen werden unabhängig von „Speichern“ sofort übernommen; Schließen des
 Task-Dialogs nimmt sie nicht zurück. Der Status der Hauptaufgabe bleibt unabhängig.

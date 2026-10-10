@@ -15,6 +15,13 @@ abstract class ProjectRepositoryContract {
   Future<void> removeGroup(int projectId, int groupId);
   Future<List<GroupUser>> fetchUsers();
   Future<void> createGroup(int projectId, String name, List<int> userIds);
+  Future<List<GroupUser>> fetchGroupUsers(int groupId);
+  Future<void> updateGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  );
 }
 
 class ProjectRepository implements ProjectRepositoryContract {
@@ -97,6 +104,16 @@ class ProjectRepository implements ProjectRepositoryContract {
   @override
   Future<List<GroupUser>> fetchUsers() async {
     final response = await _apiClient.get(ApiEndpoints.users);
+    return _parseUsers(response);
+  }
+
+  @override
+  Future<List<GroupUser>> fetchGroupUsers(int groupId) async {
+    final response = await _apiClient.get(ApiEndpoints.groupUsers(groupId));
+    return _parseUsers(response);
+  }
+
+  List<GroupUser> _parseUsers(dynamic response) {
     final users = response is Map<String, dynamic>
         ? response['users']
         : response;
@@ -116,6 +133,19 @@ class ProjectRepository implements ProjectRepositoryContract {
     List<int> userIds,
   ) async {
     await _apiClient.post(ApiEndpoints.projectGroups(projectId), {
+      'name': name,
+      'user_ids': userIds,
+    });
+  }
+
+  @override
+  Future<void> updateGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  ) async {
+    await _apiClient.put(ApiEndpoints.projectGroup(projectId, groupId), {
       'name': name,
       'user_ids': userIds,
     });

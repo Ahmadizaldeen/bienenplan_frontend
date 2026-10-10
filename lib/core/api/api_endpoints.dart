@@ -65,6 +65,7 @@ class ApiEndpoints {
 
   // Gruppen-Routen und Zuordnung von Gruppen zu Aufgaben.
   static String get groups => "$baseUrl/groups";
+  static String groupUsers(int groupId) => "$groups/$groupId/users";
   static String groupsForProject(int projectId) => projectGroups(projectId);
   static String groupsForTask(int taskId) => "$baseUrl/tasks/$taskId/groups";
   static String assignGroup(int taskId, int groupId) =>

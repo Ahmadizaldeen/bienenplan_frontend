@@ -97,11 +97,10 @@ class TaskController extends ChangeNotifier {
     }
   }
 
-  Future<void> updateTaskStatus(int taskId, String newStatus) {
-    return _guard(() async {
-      await _taskRepository.updateTaskStatus(taskId, newStatus);
-      await loadTasks();
-    }, null);
+  Future<void> updateTaskStatus(int taskId, String newStatus) async {
+    _errorMessage = null;
+    await _taskRepository.updateTaskStatus(taskId, newStatus);
+    await loadTasks();
   }
 
   /// Lädt eine einzelne Aufgabe mit allen Details (u.a. Gruppen) neu, z.B.
@@ -162,6 +161,28 @@ class TaskController extends ChangeNotifier {
       await loadTasks();
       return attachment;
     }, null);
+  }
+
+  Future<bool> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      _errorMessage = 'Aufgaben-Titel darf nicht leer sein.';
+      notifyListeners();
+      return Future.value(false);
+    }
+    return _guard(() async {
+      await _taskRepository.updateTaskTitleDeadline(
+        taskId,
+        trimmedTitle,
+        deadline,
+      );
+      await loadTasks();
+      return true;
+    }, false);
   }
 
   Future<List<Group>> fetchGroupsForProject(int projectId) {

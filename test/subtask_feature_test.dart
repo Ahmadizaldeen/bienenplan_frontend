@@ -14,6 +14,7 @@ Subtask _item({
   String title = 'Erster Schritt',
   bool completed = false,
   bool manage = true,
+  bool? canDelete,
 }) => Subtask(
   id: id,
   taskId: 7,
@@ -21,7 +22,7 @@ Subtask _item({
   completed: completed,
   createdBy: 1,
   canEdit: manage,
-  canDelete: manage,
+  canDelete: canDelete ?? manage,
   canComplete: true,
 );
 
@@ -70,6 +71,7 @@ class _Repository implements SubtaskRepositoryContract {
       title: title ?? old.title,
       completed: completed ?? old.completed,
       manage: old.canEdit,
+      canDelete: old.canDelete,
     );
     items = items.map((item) => item.id == id ? updated : item).toList();
     return updated;
@@ -268,6 +270,47 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'normal group members can rename and check but cannot create or delete',
+    (tester) async {
+      final repository = _Repository()
+        ..canCreate = false
+        ..items = [_item(canDelete: false)];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SubtaskSection(
+              taskId: 7,
+              repository: repository,
+              onChanged: () {},
+              onBusyChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Teilaufgaben'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Teilaufgabe bearbeiten'), findsOneWidget);
+      expect(find.byTooltip('Teilaufgabe loeschen'), findsNothing);
+      expect(find.text('Teilaufgabe hinzufuegen'), findsNothing);
+      await tester.tap(find.byTooltip('Teilaufgabe bearbeiten'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField),
+        'Gruppenmitglied-Titel',
+      );
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(repository.items.single.title, 'Gruppenmitglied-Titel');
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      expect(repository.items.single.completed, isTrue);
+      expect(find.byTooltip('Teilaufgabe loeschen'), findsNothing);
+      expect(repository.items.single.canDelete, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'members see checkboxes only and failed writes retain the value',

@@ -77,11 +77,15 @@ class _TaskDialogState extends State<_TaskDialog> {
   late final TextEditingController _textController;
   late String _status;
   DateTime? _deadline;
+  late String _savedText;
+  late String _savedStatus;
+  DateTime? _savedDeadline;
 
   bool _isLoadingGroups = true;
   bool _isSaving = false;
   bool _isDeleting = false;
   bool _isUploading = false;
+  bool _groupChangeBusy = false;
   bool _changed = false;
   bool _subtasksBusy = false;
   String? _error;
@@ -93,16 +97,39 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   bool get _isEditing => widget.task != null;
   int? get _taskId => widget.task?.id ?? _createdTaskId;
+  bool get _canEdit => widget.task == null || widget.task!.canEdit;
+  bool get _canEditTitleDeadline =>
+      _canEdit || widget.task!.canEditTitleDeadline;
+  bool get _titleDeadlineOnly => !_canEdit && _canEditTitleDeadline;
+  bool get _canChangeStatus =>
+      widget.task == null || widget.task!.canChangeStatus;
+  bool get _canManageGroups =>
+      widget.task == null || widget.task!.canManageGroups;
+  bool _canManageGroup(Group group) =>
+      _canManageGroups ||
+      (widget.task!.canManageLocalGroups &&
+          !group.isPersonal &&
+          !group.isGlobal &&
+          group.projectId == widget.projectId);
+  bool get _hasFieldChanges =>
+      _textController.text != _savedText || _deadline != _savedDeadline;
+  bool get _hasStatusChange => _status != _savedStatus;
+  bool get _hasAnyTaskChange => _hasFieldChanges || _hasStatusChange;
 
   @override
   void initState() {
     super.initState();
     final task = widget.task;
     _textController = TextEditingController(
-      text: task == null ? '' : composeTaskText(task.title, task.description),
+      text: task == null
+          ? ''
+          : _titleDeadlineOnly
+          ? task.title
+          : composeTaskText(task.title, task.description),
     );
     _status = _statusOptions.containsKey(task?.status) ? task!.status : 'open';
     _deadline = task?.deadlineDateTime;
+    _rememberSavedFields();
     _assignedGroupIds = task?.groupIds.toSet() ?? {};
     _loadGroups();
     if (task != null) _loadAttachments(task.id);
@@ -136,7 +163,57 @@ class _TaskDialogState extends State<_TaskDialog> {
   }
 
   Future<void> _toggleGroup(Group group, bool assign) async {
+    if (!_canManageGroup(group) || _groupChangeBusy) return;
+    setState(() => _groupChangeBusy = true);
+    try {
+      await _changeGroup(group, assign);
+    } finally {
+      if (mounted) setState(() => _groupChangeBusy = false);
+    }
+  }
+
+  Future<void> _changeGroup(Group group, bool assign) async {
     final taskId = _taskId;
+    final lastOwnSolo =
+        !assign &&
+        !group.isPersonal &&
+        group.memberCount == 1 &&
+        group.isCurrentUserMember &&
+        !_allGroups.any(
+          (other) =>
+              other.id != group.id &&
+              _assignedGroupIds.contains(other.id) &&
+              !other.isPersonal &&
+              other.memberCount == 1 &&
+              other.isCurrentUserMember,
+        );
+    if (taskId != null && lastOwnSolo) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Letzte Ein-Personen-Zuweisung entfernen?'),
+          content: const Text(
+            'Du entfernst deine letzte Ein-Personen-Zuweisung zu dieser Aufgabe. '
+            'Dadurch entfallen die Zusatzrechte dieser Zuweisung. '
+            'Rechte als Projekt-Eigentümer, Admin oder Aufgabenersteller bleiben erhalten. '
+            'Auch dein Zugriff auf die Aufgabe kann entfallen. '
+            'Nach dem Entfernen wird der Dialog geschlossen; nicht gespeicherte '
+            'Änderungen an Aufgabe, Frist und Status werden verworfen.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Zuweisung entfernen'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+    }
     if (taskId == null) {
       setState(() {
         if (assign) {
@@ -163,6 +240,22 @@ class _TaskDialogState extends State<_TaskDialog> {
     if (!mounted) return;
     if (success) {
       _changed = true;
+      if (lastOwnSolo) {
+        await widget.controller.loadTasks();
+        if (!mounted) return;
+        if (widget.controller.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Zuweisung entfernt, aber Aufgaben konnten nicht aktualisiert werden: '
+                '${widget.controller.errorMessage}',
+              ),
+            ),
+          );
+        }
+        if (mounted) Navigator.of(context).pop(true);
+        return;
+      }
     } else {
       setState(() {
         if (assign) {
@@ -207,6 +300,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       type: FileType.custom,
       allowedExtensions: _allowedExtensions.toList(),
     );
+    if (!mounted) return;
     if (files.isEmpty) return;
 
     final selected = <({String name, Uint8List bytes})>[];
@@ -246,7 +340,10 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   Future<bool> _uploadQueuedFiles(int taskId) async {
     if (_queuedFiles.isEmpty) return true;
-    setState(() => _isUploading = true);
+    setState(() {
+      _isUploading = true;
+      _error = null;
+    });
     try {
       final uploaded = await widget.controller.uploadAttachments(
         taskId,
@@ -324,7 +421,67 @@ class _TaskDialogState extends State<_TaskDialog> {
   }
 
   Future<void> _submit() async {
+    if (_isSaving ||
+        _isUploading ||
+        _isDeleting ||
+        _subtasksBusy ||
+        _groupChangeBusy) {
+      return;
+    }
+    final taskId = _taskId;
+
+    if (taskId != null && !_hasAnyTaskChange && _queuedFiles.isEmpty) {
+      if (mounted) Navigator.of(context).pop(_changed);
+      return;
+    }
+
+    if (taskId != null && !_hasFieldChanges && _hasStatusChange) {
+      if (!_canChangeStatus) {
+        setState(() {
+          _error = 'Du hast keine Berechtigung, den Status zu ändern.';
+        });
+        return;
+      }
+
+      setState(() {
+        _isSaving = true;
+        _error = null;
+      });
+
+      try {
+        await widget.controller.updateTaskStatus(taskId, _status);
+      } catch (error) {
+        if (!mounted) return;
+        setState(() {
+          _isSaving = false;
+          _error = widget.controller.errorMessage ?? error.toString();
+        });
+        return;
+      }
+
+      if (!mounted) return;
+      _rememberSavedFields();
+      _changed = true;
+      if (!await _uploadQueuedFiles(taskId)) {
+        if (mounted) setState(() => _isSaving = false);
+        return;
+      }
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
+
+    if (taskId != null && _hasFieldChanges && !_canEditTitleDeadline) {
+      setState(() {
+        _error = 'Du hast keine Berechtigung, diese Aufgabe zu bearbeiten.';
+      });
+      return;
+    }
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (taskId != null && _titleDeadlineOnly) {
+      await _submitTitleDeadline(taskId);
+      return;
+    }
     final parsed = parseTaskText(_textController.text);
     if (parsed == null) return;
 
@@ -333,7 +490,6 @@ class _TaskDialogState extends State<_TaskDialog> {
       _error = null;
     });
 
-    final taskId = _taskId;
     if (taskId == null) {
       final createdTaskId = await widget.controller.createTaskWithId(
         containerId: widget.containerId,
@@ -352,6 +508,7 @@ class _TaskDialogState extends State<_TaskDialog> {
         return;
       }
       _createdTaskId = createdTaskId;
+      _rememberSavedFields();
       _changed = true;
       if (!await _uploadQueuedFiles(createdTaskId)) {
         if (mounted) setState(() => _isSaving = false);
@@ -377,12 +534,88 @@ class _TaskDialogState extends State<_TaskDialog> {
       });
       return;
     }
+    _rememberSavedFields();
+    _changed = true;
 
     if (!await _uploadQueuedFiles(taskId)) {
       if (mounted) setState(() => _isSaving = false);
       return;
     }
     if (mounted) Navigator.of(context).pop(true);
+  }
+
+  void _rememberSavedFields() {
+    _savedText = _textController.text;
+    _savedStatus = _status;
+    _savedDeadline = _deadline;
+  }
+
+  Future<void> _submitTitleDeadline(int taskId) async {
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    if (_hasFieldChanges) {
+      final success = await widget.controller.updateTaskTitleDeadline(
+        taskId,
+        _textController.text,
+        _deadline?.toIso8601String(),
+      );
+      if (!mounted) return;
+      if (!success) {
+        setState(() {
+          _isSaving = false;
+          _error = widget.controller.errorMessage;
+        });
+        return;
+      }
+      _savedText = _textController.text;
+      _savedDeadline = _deadline;
+      _changed = true;
+      if (widget.controller.errorMessage != null) {
+        setState(() {
+          _isSaving = false;
+          _error =
+              'Titel und Frist gespeichert, aber Aktualisierung fehlgeschlagen: '
+              '${widget.controller.errorMessage}';
+        });
+        return;
+      }
+    }
+    if (_hasStatusChange) {
+      if (!_canChangeStatus) {
+        setState(() {
+          _isSaving = false;
+          _error = 'Du hast keine Berechtigung, den Status zu ändern.';
+        });
+        return;
+      }
+      try {
+        await widget.controller.updateTaskStatus(taskId, _status);
+      } catch (error) {
+        if (!mounted) return;
+        setState(() {
+          _isSaving = false;
+          _error = widget.controller.errorMessage ?? error.toString();
+        });
+        return;
+      }
+      if (!mounted) return;
+      if (widget.controller.errorMessage != null) {
+        setState(() {
+          _isSaving = false;
+          _error = widget.controller.errorMessage;
+        });
+        return;
+      }
+      _savedStatus = _status;
+      _changed = true;
+    }
+    if (!await _uploadQueuedFiles(taskId)) {
+      if (mounted) setState(() => _isSaving = false);
+      return;
+    }
+    if (mounted) Navigator.of(context).pop(_changed);
   }
 
   Future<void> _deleteTask() async {
@@ -467,7 +700,13 @@ class _TaskDialogState extends State<_TaskDialog> {
   Widget build(BuildContext context) {
     final selectedGroupIds = _assignedGroupIds.toList()..sort();
     final availableGroups = _allGroups
-        .where((group) => !_assignedGroupIds.contains(group.id))
+        .where(
+          (group) =>
+              !_assignedGroupIds.contains(group.id) &&
+              (_canManageGroups ||
+                  !widget.task!.canManageLocalGroups ||
+                  _canManageGroup(group)),
+        )
         .toList();
 
     return AlertDialog(
@@ -483,33 +722,72 @@ class _TaskDialogState extends State<_TaskDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              if (_isEditing) ...[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.person_outline),
-                  title: Text(
-                    widget.task!.creatorName.isEmpty
-                        ? 'Unbekannt'
-                        : widget.task!.creatorName,
+                if (_isEditing) ...[
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: const Text('Deine Rechte'),
+                    children: [
+                      Text(
+                        'Aufgabe/Beschreibung: ${_canEdit ? 'bearbeiten' : 'nur lesen'}\n'
+                        'Frist: ${_canEditTitleDeadline ? 'ändern' : 'nur lesen'}\n'
+                        'Status: ${_canChangeStatus ? 'ändern' : 'nur lesen'}\n'
+                        'Gruppenzuweisung: ${_canManageGroups
+                            ? 'lokal und global'
+                            : widget.task!.canManageLocalGroups
+                            ? 'nur lokale Gruppen'
+                            : 'nicht ändern'}\n'
+                        'Unteraufgaben: ${widget.task!.canCreateSubtasks
+                            ? 'erstellen, Titel ändern und abhaken'
+                            : _canChangeStatus
+                            ? 'abhaken'
+                            : 'nur lesen'}\n'
+                        'Unteraufgaben löschen: abhängig von Rolle und Ersteller; siehe Eintrag.\n'
+                        'Aufgabe löschen: ${widget.task!.canDelete ? 'erlaubt' : 'nicht erlaubt'}',
+                      ),
+                    ],
                   ),
-                  subtitle: const Text('Erstellt von'),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              TextFormField(
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                if (_isEditing) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline),
+                    subtitle: const Text('Erstellt von:'),
+                    title: Text(
+                      widget.task!.creatorName.isEmpty
+                          ? 'Unbekannt'
+                          : widget.task!.creatorName,
+                    )
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+                TextFormField(
                   controller: _textController,
+                  enabled: _canEditTitleDeadline && !_isSaving,
                   autofocus: !_isEditing,
-                  keyboardType: TextInputType.multiline,
-                  minLines: 3,
-                  maxLines: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Aufgabe',
+                  keyboardType: _titleDeadlineOnly
+                      ? TextInputType.text
+                      : TextInputType.multiline,
+                  minLines: _titleDeadlineOnly ? 1 : 3,
+                  maxLines: _titleDeadlineOnly ? 1 : 10,
+                  maxLength: _titleDeadlineOnly ? 100 : null,
+                  decoration: InputDecoration(
+                    labelText: _titleDeadlineOnly ? 'Titel' : 'Aufgabe',
                     alignLabelWithHint: true,
                   ),
-                  validator: (value) => parseTaskText(value ?? '') == null
+                  validator: (value) => _titleDeadlineOnly
+                      ? (value == null || value.trim().isEmpty
+                            ? 'Bitte einen Titel eingeben.'
+                            : null)
+                      : parseTaskText(value ?? '') == null
                       ? 'Beschreibe die Aufgabe.'
                       : null,
                 ),
+                if (_titleDeadlineOnly &&
+                    widget.task!.description.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(widget.task!.description),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   initialValue: _status,
@@ -523,9 +801,11 @@ class _TaskDialogState extends State<_TaskDialog> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) {
-                    if (value != null) setState(() => _status = value);
-                  },
+                  onChanged: (widget.task == null || _canChangeStatus)
+                      ? (value) {
+                          if (value != null) setState(() => _status = value);
+                        }
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -565,9 +845,14 @@ class _TaskDialogState extends State<_TaskDialog> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (group) {
-                            if (group != null) _toggleGroup(group, true);
-                          },
+                          onChanged:
+                              (_canManageGroups ||
+                                      widget.task!.canManageLocalGroups) &&
+                                  !_groupChangeBusy
+                              ? (group) {
+                                  if (group != null) _toggleGroup(group, true);
+                                }
+                              : null,
                         ),
                       if (_assignedGroupIds.isEmpty)
                         const Padding(
@@ -588,7 +873,10 @@ class _TaskDialogState extends State<_TaskDialog> {
                                 .map(
                                   (group) => InputChip(
                                     label: Text(group.label),
-                                    onDeleted: _isSaving
+                                    onDeleted:
+                                        (_isSaving ||
+                                            _groupChangeBusy ||
+                                            !_canManageGroup(group))
                                         ? null
                                         : () => _toggleGroup(group, false),
                                   ),
@@ -603,14 +891,16 @@ class _TaskDialogState extends State<_TaskDialog> {
                   builder: (context, constraints) {
                     final controls = [
                       TextButton.icon(
-                        onPressed: _isSaving ? null : _pickDeadline,
+                        onPressed: _isSaving || !_canEditTitleDeadline
+                            ? null
+                            : _pickDeadline,
                         icon: const Icon(Icons.event),
                         label: const Text('Frist wählen'),
                       ),
                       if (_deadline != null)
                         IconButton(
                           tooltip: 'Frist entfernen',
-                          onPressed: _isSaving
+                          onPressed: _isSaving || !_canEditTitleDeadline
                               ? null
                               : () => setState(() => _deadline = null),
                           icon: const Icon(Icons.clear),
@@ -729,7 +1019,12 @@ class _TaskDialogState extends State<_TaskDialog> {
       actions: [
         if (_isEditing)
           TextButton.icon(
-            onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
+            onPressed:
+                _isSaving ||
+                    _isUploading ||
+                    _isDeleting ||
+                    _subtasksBusy ||
+                    _groupChangeBusy
                 ? null
                 : _deleteTask,
             icon: _isDeleting
@@ -745,7 +1040,12 @@ class _TaskDialogState extends State<_TaskDialog> {
             ),
           ),
         TextButton(
-          onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
+          onPressed:
+              _isSaving ||
+                  _isUploading ||
+                  _isDeleting ||
+                  _subtasksBusy ||
+                  _groupChangeBusy
               ? null
               : () =>
                     Navigator.of(context)
@@ -753,7 +1053,12 @@ class _TaskDialogState extends State<_TaskDialog> {
           child: Text(_isEditing ? 'Schließen' : 'Abbrechen'),
         ),
         ElevatedButton(
-          onPressed: _isSaving || _isUploading || _isDeleting || _subtasksBusy
+          onPressed:
+              _isSaving ||
+                  _isUploading ||
+                  _isDeleting ||
+                  _subtasksBusy ||
+                  _groupChangeBusy
               ? null
               : _submit,
           child: _isSaving

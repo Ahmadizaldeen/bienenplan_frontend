@@ -9,6 +9,11 @@ abstract class TaskRepositoryContract {
   Future<Task> fetchTaskDetail(int taskId);
   Future<void> deleteTask(int taskId);
   Future<void> updateTaskStatus(int taskId, String newStatus);
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  );
   Future<void> updateTask(
     int taskId, {
     required String title,
@@ -55,6 +60,18 @@ class TaskRepository implements TaskRepositoryContract {
   Future<void> updateTaskStatus(int taskId, String newStatus) async {
     await _apiClient.post(ApiEndpoints.updateTaskStatus(taskId), {
       'status': newStatus,
+    });
+  }
+
+  @override
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) async {
+    await _apiClient.put(ApiEndpoints.taskDetail(taskId), {
+      'title': title,
+      'deadline': deadline,
     });
   }
 

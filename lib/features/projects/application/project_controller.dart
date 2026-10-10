@@ -176,15 +176,31 @@ class ProjectController extends ChangeNotifier {
 
   Future<List<GroupUser>> fetchUsers() => _projectRepository.fetchUsers();
 
+  Future<List<GroupUser>> fetchGroupUsers(int groupId) =>
+      _projectRepository.fetchGroupUsers(groupId);
+
+  Future<bool> updateProjectGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  ) => _mutateGroup(
+    () => _projectRepository.updateGroup(projectId, groupId, name, userIds),
+  );
+
   Future<bool> createProjectGroup(
     int projectId,
     String name,
     List<int> userIds,
-  ) async {
+  ) => _mutateGroup(
+    () => _projectRepository.createGroup(projectId, name, userIds),
+  );
+
+  Future<bool> _mutateGroup(Future<void> Function() action) async {
     if (_disposed) return false;
     _errorMessage = null;
     try {
-      await _projectRepository.createGroup(projectId, name, userIds);
+      await action();
       if (_disposed) return true;
       _errorMessage = null;
       _groupsRevision++;

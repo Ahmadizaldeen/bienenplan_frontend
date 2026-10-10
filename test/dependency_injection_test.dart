@@ -18,6 +18,13 @@ import 'package:bienenplan_frontend/features/tasks/presentation/task_container_s
 
 class _FakeTaskRepo implements TaskRepositoryContract {
   @override
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) async {}
+
+  @override
   Future<List<Task>> fetchTasks() async => [
     Task(
       id: 1,
