@@ -16,6 +16,13 @@ class Task {
   final String creatorName;
   final List<int> groupIds;
   final List<String> groupNames;
+  final bool canEdit;
+  final bool canEditTitleDeadline;
+  final bool canChangeStatus;
+  final bool canManageGroups;
+  final bool canManageLocalGroups;
+  final bool canCreateSubtasks;
+  final bool canDelete;
 
   Task({
     required this.id,
@@ -35,6 +42,13 @@ class Task {
     required this.creatorName,
     this.groupIds = const [],
     this.groupNames = const [],
+    this.canEdit = false,
+    this.canEditTitleDeadline = false,
+    this.canChangeStatus = false,
+    this.canManageGroups = false,
+    this.canManageLocalGroups = false,
+    this.canCreateSubtasks = false,
+    this.canDelete = false,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -57,6 +71,8 @@ class Task {
       if (raw.isEmpty) return const [];
       return raw.split(',').map((e) => e.trim()).toList();
     }
+
+    bool _flag(dynamic value) => value == true || value == 1 || value == '1';
 
     final status = json['status']?.toString().trim();
 
@@ -92,6 +108,13 @@ class Task {
       creatorName: json['creator_name'] ?? '',
       groupIds: parseGroupIds(json['group_ids']),
       groupNames: parseGroupNames(json['group_names']),
+      canEdit: _flag(json['can_edit']),
+      canEditTitleDeadline: _flag(json['can_edit_title_deadline']),
+      canChangeStatus: _flag(json['can_change_status']),
+      canManageGroups: _flag(json['can_manage_groups']),
+      canManageLocalGroups: _flag(json['can_manage_local_groups']),
+      canCreateSubtasks: _flag(json['can_create_subtasks']),
+      canDelete: _flag(json['can_delete']),
     );
   }
 
@@ -112,6 +135,13 @@ class Task {
       'deleted_by': deletedBy,
       'container_title': containerTitle,
       'creator_name': creatorName,
+      'can_edit': canEdit,
+      'can_edit_title_deadline': canEditTitleDeadline,
+      'can_change_status': canChangeStatus,
+      'can_manage_groups': canManageGroups,
+      'can_manage_local_groups': canManageLocalGroups,
+      'can_create_subtasks': canCreateSubtasks,
+      'can_delete': canDelete,
     };
   }
 

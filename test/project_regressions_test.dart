@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:bienenplan_frontend/core/api/api_client.dart';
+import 'package:bienenplan_frontend/core/api/api_endpoints.dart';
 import 'package:bienenplan_frontend/core/api/api_exception.dart';
 import 'package:bienenplan_frontend/features/home/presentation/home_screen.dart';
 import 'package:bienenplan_frontend/features/projects/application/project_controller.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_archive_repository.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_group_model.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_model.dart';
+import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_archive_screen.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_editor_dialog.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_groups_dialog.dart';
@@ -52,6 +55,10 @@ class _Projects extends FakeProjectRepository {
   Completer<void>? pendingWrite;
   Completer<List<ProjectGroup>>? pendingGroups;
   Completer<List<ProjectGroup>>? pendingAvailable;
+  List<GroupUser> users = const [GroupUser(id: 1, name: 'Max')];
+  String? createdGroupName;
+  List<int>? createdGroupUserIds;
+  int? createdGroupProjectId;
 
   @override
   Future<List<Project>> fetchProjects() async {
@@ -101,7 +108,18 @@ class _Projects extends FakeProjectRepository {
   @override
   Future<List<GroupUser>> fetchUsers() async {
     if (failUsers) throw _apiError;
-    return const [GroupUser(id: 1, name: 'Max')];
+    return users;
+  }
+
+  @override
+  Future<void> createGroup(
+    int projectId,
+    String name,
+    List<int> userIds,
+  ) async {
+    createdGroupProjectId = projectId;
+    createdGroupName = name;
+    createdGroupUserIds = userIds;
   }
 
   @override
@@ -119,6 +137,83 @@ class _QueuedProjects extends FakeProjectRepository {
     final request = Completer<List<Project>>();
     requests.add(request);
     return request.future;
+  }
+}
+
+class _EditableProjects extends _Projects {
+  _EditableProjects() {
+    users = const [
+      GroupUser(id: 1, name: 'Max'),
+      GroupUser(id: 2, name: 'Anna'),
+    ];
+  }
+  ProjectGroup localGroup = const ProjectGroup(
+    id: 1,
+    name: 'Max',
+    projectId: 1,
+    memberCount: 1,
+  );
+  List<GroupUser> members = const [GroupUser(id: 1, name: 'Max')];
+  bool failMembers = false;
+  int? updatedProjectId;
+  int? updatedGroupId;
+
+  @override
+  Future<List<ProjectGroup>> fetchProjectGroups(int projectId) async => [
+    localGroup,
+  ];
+
+  @override
+  Future<List<ProjectGroup>> fetchAvailableGroups() async => [
+    localGroup,
+    const ProjectGroup(id: 3, name: 'Global', isGlobal: true, memberCount: 2),
+  ];
+
+  @override
+  Future<List<GroupUser>> fetchGroupUsers(int groupId) async {
+    expect(groupId, 1);
+    if (failMembers) throw _apiError;
+    return members;
+  }
+
+  @override
+  Future<void> updateGroup(
+    int projectId,
+    int groupId,
+    String name,
+    List<int> userIds,
+  ) async {
+    if (failWrite) throw _apiError;
+    updatedProjectId = projectId;
+    updatedGroupId = groupId;
+    members = users.where((user) => userIds.contains(user.id)).toList();
+    localGroup = ProjectGroup(
+      id: groupId,
+      name: name,
+      projectId: projectId,
+      memberCount: members.length,
+    );
+  }
+}
+
+class _GroupApi extends ApiClient {
+  String? writtenUrl;
+  Map<String, dynamic>? writtenBody;
+  @override
+  Future<dynamic> get(String url) async {
+    expect(url, ApiEndpoints.groupUsers(7));
+    return {
+      'users': [
+        {'id': '2', 'name': 'Max'},
+      ],
+    };
+  }
+
+  @override
+  Future<dynamic> put(String url, Map<String, dynamic> body) async {
+    writtenUrl = url;
+    writtenBody = body;
+    return {};
   }
 }
 
@@ -195,6 +290,288 @@ ProjectController _controller(FakeProjectRepository repository) =>
     );
 
 void main() {
+  test(
+    'group repository loads members and atomically submits name and membership',
+    () async {
+      final api = _GroupApi();
+      final repository = ProjectRepository(apiClient: api);
+      final members = await repository.fetchGroupUsers(7);
+      expect(members.single.id, 2);
+      expect(members.single.name, 'Max');
+      await repository.updateGroup(1, 7, 'Max', [2]);
+      expect(api.writtenUrl, ApiEndpoints.projectGroup(1, 7));
+      expect(api.writtenBody, {
+        'name': 'Max',
+        'user_ids': [2],
+      });
+      expect(
+        ProjectGroup.fromJson({'id': 7, 'member_count': '1'}).memberCount,
+        1,
+      );
+    },
+  );
+
+  for (final isOwner in [true, false]) {
+    testWidgets(
+      'owner/admin (isOwner: $isOwner) edits local members from one to many and back',
+      (tester) async {
+        final repository = _EditableProjects();
+        final controller = _controller(repository);
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ProjectGroupsDialog(
+              project: Project(
+                id: 1,
+                name: 'Projekt',
+                isOwner: isOwner,
+                canManageGroups: true,
+              ),
+              controller: controller,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Gruppe bearbeiten'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.byTooltip('Gruppe bearbeiten'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextFormField>(find.byType(TextFormField))
+              .controller!
+              .text,
+          'Max',
+        );
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Max').last,
+              )
+              .value,
+          isTrue,
+        );
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Anna'),
+              )
+              .value,
+          isFalse,
+        );
+        await tester.enterText(find.byType(TextFormField), 'Team');
+        await tester.tap(find.text('Anna'));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Diese Änderung entzieht die Zusatzrechte'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+        expect(repository.updatedProjectId, 1);
+        expect(repository.updatedGroupId, 1);
+        expect(repository.members.map((user) => user.id), [1, 2]);
+        expect(repository.localGroup.name, 'Team');
+        expect(
+          find.textContaining(
+            'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar',
+          ),
+          findsNothing,
+        );
+        expect(controller.groupsRevision, 1);
+        await tester.tap(find.byTooltip('Gruppe bearbeiten'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Anna'));
+        await tester.enterText(find.byType(TextFormField), '');
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining(
+            'Diese Änderung gibt dem ausgewählten Benutzer Zusatzrechte',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+        expect(repository.localGroup.name, 'Max');
+        expect(repository.localGroup.memberCount, 1);
+        expect(controller.groupsRevision, 2);
+        expect(
+          find.textContaining(
+            'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar',
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'group editor surfaces member-load and save errors without reporting changes',
+    (tester) async {
+      final repository = _EditableProjects()..failMembers = true;
+      final controller = _controller(repository);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProjectGroupsDialog(project: _project, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Gruppe bearbeiten'));
+      await tester.pumpAndSettle();
+      expect(find.text(_apiError.message), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+      repository.failMembers = false;
+      repository.failWrite = true;
+      await tester.tap(find.byTooltip('Gruppe bearbeiten'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Changed');
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(find.text(_apiError.message), findsOneWidget);
+      expect(repository.localGroup.name, 'Max');
+      expect(controller.groupsRevision, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('members have no local group editing controls', (tester) async {
+    final controller = _controller(_EditableProjects());
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProjectGroupsDialog(
+          project: const Project(id: 1, name: 'Projekt'),
+          controller: controller,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Gruppe bearbeiten'), findsNothing);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, 'Neue lokale Gruppe'),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<CheckboxListTile>(
+            find.widgetWithText(CheckboxListTile, 'Max'),
+          )
+          .onChanged,
+      isNull,
+    );
+  });
+
+  for (final scenario in [
+    (participants: 1, enteredName: '', expectedName: 'Max'),
+    (participants: 1, enteredName: '   ', expectedName: 'Max'),
+    (
+      participants: 1,
+      enteredName: '  Eigener Name  ',
+      expectedName: 'Eigener Name',
+    ),
+    (participants: 2, enteredName: '  Team  ', expectedName: 'Team'),
+  ]) {
+    testWidgets(
+      'creates project group with ${scenario.participants} users and name "${scenario.enteredName}"',
+      (tester) async {
+        final repository = _Projects()
+          ..users = const [
+            GroupUser(id: 1, name: 'Max'),
+            GroupUser(id: 2, name: 'Anna'),
+          ];
+        final controller = _controller(repository);
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ProjectGroupsDialog(
+              project: _project,
+              controller: controller,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Neue lokale Gruppe'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Max'));
+        if (scenario.participants == 2) {
+          await tester.tap(find.text('Anna'));
+        }
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(TextFormField),
+          scenario.enteredName,
+        );
+        await tester.tap(find.text('Erstellen'));
+        await tester.pumpAndSettle();
+
+        expect(repository.createdGroupProjectId, _project.id);
+        expect(repository.createdGroupName, scenario.expectedName);
+        expect(
+          repository.createdGroupUserIds,
+          scenario.participants == 1 ? [1] : [1, 2],
+        );
+        expect(find.text('Neue Gruppe erstellen'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'requires participants and a name for multiple users, then accepts one user without name',
+    (tester) async {
+      final repository = _Projects()
+        ..users = const [
+          GroupUser(id: 1, name: 'Max'),
+          GroupUser(id: 2, name: 'Anna'),
+        ];
+      final controller = _controller(repository);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProjectGroupsDialog(project: _project, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Neue lokale Gruppe'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Erstellen'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Bitte mindestens einen Benutzer auswählen.'),
+        findsOneWidget,
+      );
+      expect(repository.createdGroupName, isNull);
+
+      await tester.tap(find.text('Max'));
+      await tester.tap(find.text('Anna'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bitte einen Gruppennamen eingeben.'), findsOneWidget);
+      expect(repository.createdGroupName, isNull);
+
+      await tester.tap(find.text('Max'));
+      await tester.pumpAndSettle();
+      expect(find.text('Gruppenname (optional)'), findsOneWidget);
+      await tester.tap(find.text('Erstellen'));
+      await tester.pumpAndSettle();
+      expect(repository.createdGroupName, 'Anna');
+      expect(repository.createdGroupUserIds, [2]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   final mutations =
       <String, Future<ProjectMutationResult> Function(ProjectController)>{
         'create': (controller) => controller.createProject('Neu'),

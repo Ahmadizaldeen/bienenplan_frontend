@@ -26,6 +26,13 @@ class _UnexpectedSubtaskRepository extends SubtaskRepository {
 }
 
 class _DeletingTaskRepository implements TaskRepositoryContract {
+  @override
+  Future<void> updateTaskTitleDeadline(
+    int taskId,
+    String title,
+    String? deadline,
+  ) async {}
+
   _DeletingTaskRepository({this.deleteError});
 
   final Object? deleteError;
