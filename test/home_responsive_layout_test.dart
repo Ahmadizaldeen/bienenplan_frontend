@@ -7,6 +7,8 @@ import 'package:bienenplan_frontend/features/projects/application/project_contro
 import 'package:bienenplan_frontend/features/projects/data/project_local_store.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_model.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
+import 'package:bienenplan_frontend/features/sync/data/change_feed.dart';
+import 'package:bienenplan_frontend/features/sync/data/change_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
     as task_container;
@@ -51,6 +53,7 @@ void main() {
                 taskController: taskController,
                 projectController: projectController,
                 userController: userController,
+                changeRepository: _NoChangesRepository(),
               ),
             ),
           );
@@ -207,6 +210,7 @@ void main() {
           taskController: taskController,
           projectController: projectController,
           userController: userController,
+          changeRepository: _NoChangesRepository(),
         ),
       ),
     );
@@ -316,4 +320,10 @@ class _FakeUserRepository extends UserRepository {
       email: 'long.user.name.for.small.screen@example.com',
     );
   }
+}
+
+class _NoChangesRepository implements ChangeRepositoryContract {
+  @override
+  Future<ChangeFeed> fetchChanges({String? after}) async =>
+      const ChangeFeed(nextCursor: 'cursor', refreshRequired: false);
 }

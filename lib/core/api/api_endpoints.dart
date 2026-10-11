@@ -60,6 +60,12 @@ class ApiEndpoints {
   static String projectGroup(int projectId, int groupId) =>
       "${projectGroups(projectId)}/$groupId";
 
+  // Änderungs-Feed für das Polling. Ohne Cursor liefert das Backend nur eine
+  // Baseline; der Cursor ist opak und wird unverändert zurückgegeben.
+  static String get changes => "$baseUrl/changes";
+  static String changesAfter(String cursor) =>
+      Uri.parse(changes).replace(queryParameters: {'after': cursor}).toString();
+
   // Behälter-Routen.
   static String get containers => "$baseUrl/containers";
 

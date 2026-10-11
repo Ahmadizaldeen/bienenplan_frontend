@@ -53,27 +53,40 @@ class TaskController extends ChangeNotifier {
   List<container_model.Container> get extraContainers =>
       List.unmodifiable(_extraContainers);
 
-  Future<void> loadTasks() async {
-    if (_disposed) return;
+  /// Lädt Aufgaben und Container. Liefert `true`, wenn genau dieser Load
+  /// erfolgreich übernommen wurde.
+  ///
+  /// Mit [silent] bleibt der sichtbare Zustand während des Ladens erhalten
+  /// (kein Ladeindikator); bei einem Fehler werden die bisherigen Daten und
+  /// Fehlermeldungen nicht angetastet, der Aufrufer erhält nur `false`.
+  Future<bool> loadTasks({bool silent = false}) async {
+    if (_disposed) return false;
     final version = ++_loadVersion;
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       final results = await Future.wait([
         _taskRepository.fetchTasks(),
         _containerRepository.fetchContainers(),
       ]);
-      if (_disposed || version != _loadVersion) return;
+      if (_disposed || version != _loadVersion) return false;
       _tasks = results[0] as List<Task>;
       _extraContainers = results[1] as List<container_model.Container>;
+      _errorMessage = null;
+      return true;
     } catch (error) {
-      if (_disposed || version != _loadVersion) return;
+      if (_disposed || version != _loadVersion || silent) return false;
       _errorMessage = _messageOf(error);
       _tasks = const [];
       _extraContainers = const [];
+      return false;
     } finally {
+      // Auch ein stiller Load kann einen sichtbaren Load ersetzt haben; der
+      // jeweils neueste Load beendet deshalb immer den Ladezustand.
       if (version == _loadVersion) {
         _isLoading = false;
         if (!_disposed) notifyListeners();
