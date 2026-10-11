@@ -161,14 +161,24 @@ class _Attachments extends TaskAttachmentRepository {
 }
 
 class _Groups implements GroupRepositoryContract {
+  List<Group> available = [];
+  List<Group> assigned = [];
+  final assignments = <(int, int)>[];
+  final removals = <(int, int)>[];
+
   @override
-  Future<List<Group>> fetchGroupsForProject(int projectId) async => [];
+  Future<List<Group>> fetchGroupsForProject(int projectId) async => available;
   @override
-  Future<List<Group>> fetchGroupsForTask(int taskId) async => [];
+  Future<List<Group>> fetchGroupsForTask(int taskId) async => assigned;
   @override
-  Future<void> assignGroupToTask(int taskId, int groupId) async {}
+  Future<void> assignGroupToTask(int taskId, int groupId) async {
+    assignments.add((taskId, groupId));
+  }
+
   @override
-  Future<void> removeGroupFromTask(int taskId, int groupId) async {}
+  Future<void> removeGroupFromTask(int taskId, int groupId) async {
+    removals.add((taskId, groupId));
+  }
 }
 
 class _Subtasks extends SubtaskRepository {
@@ -181,25 +191,31 @@ void main() {
   late _Tasks tasks;
   late _Attachments attachments;
   late _Picker picker;
+  late _Groups groups;
   late TaskController controller;
 
   setUp(() {
     tasks = _Tasks();
     attachments = _Attachments();
     picker = _Picker();
+    groups = _Groups();
     final originalPicker = FilePickerPlatform.instance;
     FilePickerPlatform.instance = picker;
     addTearDown(() => FilePickerPlatform.instance = originalPicker);
     controller = TaskController(
       taskRepository: tasks,
       containerRepository: FakeContainerRepository(),
-      groupRepository: _Groups(),
+      groupRepository: groups,
       attachmentRepository: attachments,
     );
     addTearDown(controller.dispose);
   });
 
-  Future<void> open(WidgetTester tester, {bool create = false}) async {
+  Future<void> open(
+    WidgetTester tester, {
+    bool create = false,
+    Task? task,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -210,7 +226,7 @@ void main() {
                 controller: controller,
                 containerId: 10,
                 projectId: 1,
-                task: create ? null : tasks.task,
+                task: create ? null : task ?? tasks.task,
                 subtaskRepository: _Subtasks(),
               ),
               child: const Text('Öffnen'),
@@ -228,6 +244,72 @@ void main() {
     await tester.tap(find.text('Dateien hinzufügen'));
     await tester.pumpAndSettle();
   }
+
+  const globalGroup = Group(id: 44, name: 'All-in-One', isGlobal: true);
+
+  testWidgets('new task can select and assign a global project group', (
+    tester,
+  ) async {
+    groups.available = [globalGroup];
+    await open(tester, create: true);
+    final dropdown = find.byType(DropdownButtonFormField<Group>);
+    await tester.ensureVisible(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All-in-One').last);
+    await tester.pumpAndSettle();
+    expect(groups.assignments, isEmpty);
+    await tester.enterText(find.byType(TextFormField).first, 'Globale Aufgabe');
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(tasks.creates, 1);
+    expect(groups.assignments, [(7, 44)]);
+    expect(find.text('Neue Aufgabe'), findsNothing);
+  });
+
+  testWidgets('task collaborator can assign and remove global project group', (
+    tester,
+  ) async {
+    groups.available = [globalGroup];
+    final task = Task.fromJson({
+      ...tasks.task.toJson(),
+      'project_id': 1,
+      'can_manage_groups': 1,
+      'can_manage_local_groups': 1,
+    });
+    await open(tester, task: task);
+    final dropdown = find.byType(DropdownButtonFormField<Group>);
+    await tester.ensureVisible(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All-in-One').last);
+    await tester.pumpAndSettle();
+    expect(groups.assignments, [(7, 44)]);
+    final chipFinder = find.widgetWithText(InputChip, 'All-in-One');
+    expect(chipFinder, findsOneWidget);
+    final chip = tester.widget<InputChip>(chipFinder);
+    expect(chip.onDeleted, isNotNull);
+    chip.onDeleted!();
+    await tester.pumpAndSettle();
+    expect(groups.removals, [(7, 44)]);
+    expect(chipFinder, findsNothing);
+  });
+
+  testWidgets('global-only reader cannot change group assignments', (
+    tester,
+  ) async {
+    groups.available = [globalGroup];
+    groups.assigned = [globalGroup];
+    await open(tester);
+    final chip = tester.widget<InputChip>(
+      find.widgetWithText(InputChip, 'All-in-One'),
+    );
+    expect(chip.onDeleted, isNull);
+    expect(groups.assignments, isEmpty);
+    expect(groups.removals, isEmpty);
+  });
 
   testWidgets(
     'assigned member uploads, downloads and saves without task edit',

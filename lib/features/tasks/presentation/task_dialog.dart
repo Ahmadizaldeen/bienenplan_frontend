@@ -110,11 +110,10 @@ class _TaskDialogState extends State<_TaskDialog> {
   bool get _canManageGroups =>
       widget.task == null || widget.task!.canManageGroups;
   bool _canManageGroup(Group group) =>
-      _canManageGroups ||
-      (widget.task!.canManageLocalGroups &&
-          !group.isPersonal &&
-          !group.isGlobal &&
-          group.projectId == widget.projectId);
+      !group.isPersonal &&
+      (group.isGlobal || group.projectId == widget.projectId) &&
+      (_canManageGroups ||
+          (widget.task!.canManageLocalGroups && !group.isGlobal));
   bool get _hasFieldChanges =>
       _textController.text != _savedText || _deadline != _savedDeadline;
   bool get _hasStatusChange => _status != _savedStatus;
@@ -792,7 +791,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                         'Frist: ${_canEditTitleDeadline ? 'ändern' : 'nur lesen'}\n'
                         'Status: ${_canChangeStatus ? 'ändern' : 'nur lesen'}\n'
                         'Gruppenzuweisung: ${_canManageGroups
-                            ? 'lokal und global'
+                            ? 'lokale und globale Projektgruppen'
                             : widget.task!.canManageLocalGroups
                             ? 'nur lokale Gruppen'
                             : 'nicht ändern'}\n'

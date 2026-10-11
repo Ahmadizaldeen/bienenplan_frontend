@@ -196,25 +196,27 @@ oder App-Admin geändert werden. Globale Gruppen werden dort nicht bearbeitet.
 Die API speichert Name und Mitglieder gemeinsam über
 `PUT /api/projects/{projectId}/groups/{groupId}`.
 
-Gruppenlisten liefern `member_count` als Anzahl aktiver Mitglieder. Bei genau
-einem aktiven Mitglied darf dieses zusätzlich Titel, Beschreibung und Frist der seiner Gruppe
-zugewiesenen Aufgaben ändern. Sobald ein zweites aktives Mitglied hinzukommt,
-entfallen diese Zusatzrechte. Das Backend liefert dafür
+Gruppenlisten liefern `member_count` als Anzahl aktiver Mitglieder. Mitglieder
+zugewiesener lokaler Gruppen sowie der Eigentümer einer zugewiesenen
+persönlichen Gruppe dürfen Titel, Beschreibung und Frist bearbeiten,
+unabhängig von der Mitgliederzahl. Das Backend liefert dafür
 `can_edit` und `can_edit_title_deadline`; der Aufgaben-Dialog gibt das normale
 mehrzeilige Feld „Aufgabe“ inklusive Beschreibung und die Friststeuerung frei.
 Titel und Beschreibung werden wie bisher aus dem Freitext abgeleitet und über
-den normalen Aufgaben-Endpunkt gespeichert. `can_manage_local_groups` erlaubt
-zusätzlich lokale Gruppen desselben Projekts zuzuweisen und zu entfernen;
-globale Gruppen sind für diese eingeschränkte Auswahl gesperrt. Unteraufgaben
-können hinzugefügt und abgehakt werden. Task-Löschrechte bleiben unverändert.
-Wer seine letzte Ein-Personen-Zuweisung entfernt, verliert diese Zusatzrechte.
+den normalen Aufgaben-Endpunkt gespeichert. `can_manage_groups` erlaubt
+zusätzlich lokale und globale, dem Projekt zugeordnete Gruppen zuzuweisen und
+zu entfernen. `can_manage_local_groups` bleibt als kompatibles API-Feld erhalten.
+Globale Gruppenmitgliedschaft allein erlaubt keine Gruppenzuweisungen.
+Unteraufgaben können vollständig verwaltet werden. Task-Löschrechte bleiben
+unverändert. Beim Entfernen einer eigenen Zuweisung können Aufgabenrechte und
+Zugriff entfallen, sofern keine andere Berechtigungsgrundlage bestehen bleibt.
 Der Aufgaben-Dialog enthält eine aufklappbare Übersicht „Deine Rechte“.
 Beim Entfernen der eigenen letzten Ein-Personen-Zuweisung erscheint eine
 Bestätigung; nach erfolgreichem Entfernen wird die Aufgabenliste aktualisiert
 und der Dialog geschlossen, damit keine veralteten Rechte angezeigt werden.
 Die API liefert dafür `member_count` und `is_current_user_member` in Projektgruppen.
 Die Gruppenbearbeitung zeigt vor dem Speichern einen Hinweis, wenn eine
-Mitgliederänderung Ein-Personen-Zusatzrechte erteilt, entzieht oder überträgt.
+Mitgliederänderung Aufgabenrechte beeinflusst.
 Reine Statusänderungen verwenden weiterhin
 ihren eigenen Endpunkt.
 
