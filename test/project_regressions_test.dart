@@ -13,6 +13,8 @@ import 'package:bienenplan_frontend/features/projects/presentation/project_archi
 import 'package:bienenplan_frontend/features/projects/presentation/project_editor_dialog.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_groups_dialog.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_list_widget.dart';
+import 'package:bienenplan_frontend/features/sync/data/change_feed.dart';
+import 'package:bienenplan_frontend/features/sync/data/change_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
     as model;
@@ -880,6 +882,7 @@ void main() {
             projectController: projects,
             taskController: tasks,
             userController: users,
+            changeRepository: _NoChangesRepository(),
           ),
         ),
       );
@@ -940,4 +943,10 @@ void main() {
       expect(archive.restores, 1);
     },
   );
+}
+
+class _NoChangesRepository implements ChangeRepositoryContract {
+  @override
+  Future<ChangeFeed> fetchChanges({String? after}) async =>
+      const ChangeFeed(nextCursor: 'cursor', refreshRequired: false);
 }

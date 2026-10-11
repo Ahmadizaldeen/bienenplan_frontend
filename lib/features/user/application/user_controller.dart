@@ -13,28 +13,48 @@ class UserController extends ChangeNotifier {
   String? _errorMessage;
   AppUser? _currentUser;
   Uint8List? _currentProfilePictureBytes;
+  bool _disposed = false;
+  int _loadVersion = 0;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   AppUser? get currentUser => _currentUser;
   Uint8List? get currentProfilePictureBytes => _currentProfilePictureBytes;
 
-  Future<void> loadCurrentUser() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  /// Lädt den aktuellen Benutzer. Liefert `true`, wenn genau dieser Load
+  /// übernommen wurde. Mit [silent] bleiben Ladezustand, bisheriger Benutzer
+  /// und Fehlermeldung bei einem Fehler unverändert.
+  Future<bool> loadCurrentUser({bool silent = false}) async {
+    if (_disposed) return false;
+    final version = ++_loadVersion;
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
-      _currentUser = await _userRepository.fetchCurrentUser();
+      final user = await _userRepository.fetchCurrentUser();
+      if (_disposed || version != _loadVersion) return false;
       // Nach einem Neustart ist die Backend-URL die persistente Bildquelle;
-      // lokale Upload-Bytes gelten nur für die unmittelbare Vorschau.
-      _currentProfilePictureBytes = null;
+      // lokale Upload-Bytes gelten nur für die unmittelbare Vorschau. Ein
+      // stiller Refresh behält sie nur, solange sich das Bild nicht geändert hat.
+      if (!silent || user.picture != _currentUser?.picture) {
+        _currentProfilePictureBytes = null;
+      }
+      _currentUser = user;
+      _errorMessage = null;
+      return true;
     } catch (error) {
+      if (_disposed || version != _loadVersion || silent) return false;
       _errorMessage = error.toString().replaceAll('Exception: ', '');
       _currentUser = null;
+      return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (version == _loadVersion) {
+        _isLoading = false;
+        if (!_disposed) notifyListeners();
+      }
     }
   }
 
@@ -60,7 +80,13 @@ class UserController extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

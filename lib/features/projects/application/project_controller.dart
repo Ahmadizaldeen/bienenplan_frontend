@@ -46,21 +46,26 @@ class ProjectController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> loadProjects() async {
-    if (_disposed) return;
+  /// Lädt die Projekte. Liefert `true`, wenn genau dieser Load übernommen
+  /// wurde. Mit [silent] bleiben Ladezustand, bisherige Daten und
+  /// Fehlermeldungen bei einem Fehler unverändert.
+  Future<bool> loadProjects({bool silent = false}) async {
+    if (_disposed) return false;
     final version = ++_loadVersion;
-    _isLoading = true;
-    _errorMessage = null;
-    _notify();
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      _notify();
+    }
 
     try {
       final projects = await _projectRepository.fetchProjects();
-      if (_disposed || version != _loadVersion) return;
+      if (_disposed || version != _loadVersion) return false;
 
       // Beim ersten Laden gespeicherte Auswahl wiederherstellen.
       if (_selectedProjectId == null) {
         final storedId = await _projectLocalStore.getSelectedProjectId();
-        if (_disposed || version != _loadVersion) return;
+        if (_disposed || version != _loadVersion) return false;
         _selectedProjectId ??= storedId;
       }
       _projects = projects;
@@ -71,9 +76,12 @@ class ProjectController extends ChangeNotifier {
       if (!stillExists) {
         _selectedProjectId = _projects.isNotEmpty ? _projects.first.id : null;
       }
+      _errorMessage = null;
+      return true;
     } catch (error) {
-      if (_disposed || version != _loadVersion) return;
+      if (_disposed || version != _loadVersion || silent) return false;
       _errorMessage = error.toString().replaceAll('Exception: ', '');
+      return false;
     } finally {
       if (version == _loadVersion) {
         _isLoading = false;

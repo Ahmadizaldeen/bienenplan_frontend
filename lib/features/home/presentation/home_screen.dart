@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
+import '../../sync/application/change_poller.dart';
+import '../../sync/data/change_repository.dart';
 import '../../tasks/application/task_controller.dart';
 import '../../tasks/presentation/task_container_screen.dart';
 import '../../user/application/user_controller.dart';
@@ -15,9 +17,15 @@ class HomeScreen extends StatefulWidget {
     this.taskController,
     this.projectController,
     this.userController,
+    this.changeRepository,
+    this.pollInterval = const Duration(seconds: 5),
   });
 
   final VoidCallback onLogout;
+
+  /// Quelle für GET /api/changes; Tests injizieren hier eine Fake-Variante.
+  final ChangeRepositoryContract? changeRepository;
+  final Duration pollInterval;
 
   /// Optional von außen injizierte Controller (z.B. für Tests). Wird keiner
   /// übergeben, verwaltet HomeScreen seine eigenen Controller.
@@ -29,7 +37,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isProfileExpanded = false;
   final _homeContentKey = GlobalKey();
   late int _groupsRevision;
@@ -44,12 +52,49 @@ class _HomeScreenState extends State<HomeScreen> {
   late final UserController _userController =
       widget.userController ?? UserController();
 
+  late final ChangePoller _changePoller = ChangePoller(
+    repository: widget.changeRepository ?? ChangeRepository(),
+    onRefreshRequired: _silentRefresh,
+    interval: widget.pollInterval,
+  );
+
+  // Polling startet erst nach Baseline und Initial-Load.
+  bool _pollingReady = false;
+  bool _appResumed = true;
+
   @override
   void initState() {
     super.initState();
     _groupsRevision = _projectController.groupsRevision;
     _projectController.addListener(_handleProjectUpdate);
-    _refreshAll();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _appResumed = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _initialize();
+  }
+
+  /// Erst die Baseline, dann der Full Load: Änderungen, die während des
+  /// Initial-Loads passieren, liegen damit nach dem Cursor und werden beim
+  /// ersten Poll gemeldet.
+  Future<void> _initialize() async {
+    await _changePoller.establishBaseline();
+    if (!mounted) return;
+    final loaded = await _loadAll();
+    if (!mounted) return;
+    if (!loaded) _changePoller.markRefreshRequired();
+    _pollingReady = true;
+    if (_appResumed) _changePoller.start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appResumed = state == AppLifecycleState.resumed;
+    if (!_pollingReady) return;
+    if (_appResumed) {
+      _changePoller.resume();
+    } else {
+      _changePoller.pause();
+    }
   }
 
   void _handleProjectUpdate() {
@@ -65,6 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _changePoller.dispose();
     _projectController.removeListener(_handleProjectUpdate);
     // Nur aufräumen, wenn dieser Screen die Controller selbst erzeugt hat.
     // Von außen injizierte Controller gehören dem Owner und dürfen hier
@@ -75,12 +122,29 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _refreshAll() {
-    return Future.wait([
-      _taskController.loadTasks(),
-      _projectController.loadProjects(),
-      _userController.loadCurrentUser(),
+  // Manueller Refresh (Button und Pull-to-Refresh): sofort und mit sichtbarem
+  // Ladezustand wie bisher.
+  Future<void> _refreshAll() => _loadAll();
+
+  Future<bool> _loadAll({bool silent = false}) async {
+    final results = await Future.wait([
+      _taskController.loadTasks(silent: silent),
+      _projectController.loadProjects(silent: silent),
+      _userController.loadCurrentUser(silent: silent),
     ]);
+    return results.every((ok) => ok);
+  }
+
+  // Vom Poller ausgelöst: bestehende Daten bleiben sichtbar, kein Spinner.
+  // Offene Dialoge halten eigene Formularzustände und werden nicht überschrieben.
+  Future<bool> _silentRefresh() {
+    if (!mounted) return Future.value(false);
+    return _loadAll(silent: true);
+  }
+
+  void _handleLogout() {
+    _changePoller.stop();
+    widget.onLogout();
   }
 
   @override
@@ -102,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final isNarrowPhone = constraints.maxWidth < 600;
 
               final sidebar = UserProfileSidebar(
-                onLogout: widget.onLogout,
+                onLogout: _handleLogout,
                 isExpanded: _isProfileExpanded,
                 onToggle: () => setState(() {
                   _isProfileExpanded = !_isProfileExpanded;
@@ -114,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 key: _homeContentKey,
                 taskController: _taskController,
                 projectController: _projectController,
+                changePoller: _changePoller,
                 onRefresh: _refreshAll,
                 leading: isNarrowPhone ? sidebar : null,
               );
@@ -176,12 +241,14 @@ class _HomeContent extends StatelessWidget {
     super.key,
     required this.taskController,
     required this.projectController,
+    required this.changePoller,
     required this.onRefresh,
     this.leading,
   });
 
   final TaskController taskController;
   final ProjectController projectController;
+  final ChangePoller changePoller;
   final Future<void> Function() onRefresh;
   final Widget? leading;
 
@@ -199,6 +266,7 @@ class _HomeContent extends StatelessWidget {
               leading!,
               const SizedBox(height: AppSpacing.md),
             ],
+            _SyncStatusBanner(poller: changePoller),
             ProjectOverviewHeader(onRefresh: onRefresh),
             const SizedBox(height: AppSpacing.md),
             AnimatedBuilder(
@@ -213,6 +281,61 @@ class _HomeContent extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dezenter Hinweis bei Polling-Fehlern; die angezeigten Daten bleiben erhalten.
+class _SyncStatusBanner extends StatelessWidget {
+  const _SyncStatusBanner({required this.poller});
+
+  final ChangePoller poller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: poller,
+      builder: (context, _) {
+        final message = poller.errorMessage;
+        if (message == null) return const SizedBox.shrink();
+        final scheme = Theme.of(context).colorScheme;
+        return Padding(
+          key: const ValueKey('change-poll-error'),
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Material(
+            color: scheme.errorContainer,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.sync_problem, color: scheme.onErrorContainer),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      poller.isUnauthorized
+                          ? message
+                          : '$message Neuer Versuch folgt automatisch.',
+                      style: TextStyle(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                  if (!poller.isUnauthorized)
+                    TextButton(
+                      key: const ValueKey('change-poll-retry'),
+                      onPressed: poller.isRequestInFlight
+                          ? null
+                          : poller.pollNow,
+                      child: const Text('Jetzt versuchen'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

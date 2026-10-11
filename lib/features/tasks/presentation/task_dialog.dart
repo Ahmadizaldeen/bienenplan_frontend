@@ -94,6 +94,10 @@ class _TaskDialogState extends State<_TaskDialog> {
   int? _createdTaskId;
   List<({String name, Uint8List bytes})> _queuedFiles = [];
   List<TaskAttachment> _attachments = [];
+  // Ob die Aufgabe beim Öffnen in der Liste des Controllers enthalten war;
+  // nur dann lässt sich ein späteres Verschwinden zuverlässig erkennen.
+  bool _listedAtOpen = false;
+  bool _remoteChanged = false;
 
   bool get _isEditing => widget.task != null;
   int? get _taskId => widget.task?.id ?? _createdTaskId;
@@ -132,14 +136,49 @@ class _TaskDialogState extends State<_TaskDialog> {
     _rememberSavedFields();
     _assignedGroupIds = task?.groupIds.toSet() ?? {};
     _loadGroups();
-    if (task != null) _loadAttachments(task.id);
+    if (task != null) {
+      _loadAttachments(task.id);
+      _listedAtOpen = widget.controller.tasks.any((t) => t.id == task.id);
+      widget.controller.addListener(_handleControllerUpdate);
+    }
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerUpdate);
     _textController.dispose();
     super.dispose();
   }
+
+  /// Ein (stiller) Refresh der Aufgabenliste überschreibt keine Eingaben im
+  /// offenen Dialog. Haben sich Rechte geändert oder ist die Aufgabe nicht mehr
+  /// sichtbar, wird stattdessen nur ein Hinweis eingeblendet.
+  void _handleControllerUpdate() {
+    final original = widget.task;
+    final controller = widget.controller;
+    if (!mounted || original == null || _remoteChanged || _isDeleting) return;
+    if (controller.isLoading || controller.errorMessage != null) return;
+    Task? current;
+    for (final task in controller.tasks) {
+      if (task.id == original.id) {
+        current = task;
+        break;
+      }
+    }
+    final stale = current == null
+        ? _listedAtOpen
+        : !_sameCapabilities(original, current);
+    if (stale) setState(() => _remoteChanged = true);
+  }
+
+  static bool _sameCapabilities(Task a, Task b) =>
+      a.canEdit == b.canEdit &&
+      a.canEditTitleDeadline == b.canEditTitleDeadline &&
+      a.canChangeStatus == b.canChangeStatus &&
+      a.canManageGroups == b.canManageGroups &&
+      a.canManageLocalGroups == b.canManageLocalGroups &&
+      a.canCreateSubtasks == b.canCreateSubtasks &&
+      a.canDelete == b.canDelete;
 
   Future<void> _loadGroups() async {
     final projectId = widget.projectId;
@@ -722,6 +761,27 @@ class _TaskDialogState extends State<_TaskDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_remoteChanged) ...[
+                  Container(
+                    key: const ValueKey('task-dialog-remote-changed'),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Text(
+                      'Diese Aufgabe oder deine Rechte wurden zwischenzeitlich '
+                      'geändert. Schließe den Dialog und öffne ihn erneut, um '
+                      'den aktuellen Stand zu sehen.',
+                      style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onTertiaryContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 if (_isEditing) ...[
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
@@ -757,7 +817,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                       widget.task!.creatorName.isEmpty
                           ? 'Unbekannt'
                           : widget.task!.creatorName,
-                    )
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
