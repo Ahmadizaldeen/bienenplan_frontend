@@ -235,12 +235,15 @@ werden.“ Es erfolgen keine Subtask-Anfragen. Aufgabenkarten zeigen keine Teila
 
 Der Bereich startet eingeklappt und lädt bei gespeicherten Aufgaben beim ersten
 Öffnen. Reihenfolge: ID.
-Admin, Projekt-Eigentümer, berechtigte Task-Ersteller und zugewiesene
-Ein-Personen-Gruppen können hinzufügen. Normale Gruppenmitglieder mit Task-Zugriff
-können Titel ändern und abhaken, aber nicht erstellen oder löschen.
-Admin, Projekt-Eigentümer und Task-Ersteller behalten ihre Löschrechte;
-berechtigte Ein-Personen-Zuweisungen dürfen eigene Unteraufgaben löschen.
-Die API liefert die jeweiligen Berechtigungen.
+Projektgruppen-Mitgliedschaft allein macht Aufgaben nicht sichtbar. Mitglieder
+sehen Aufgaben nur, wenn eine ihrer Gruppen direkt der Aufgabe zugewiesen ist;
+dort können sie Teilaufgaben erstellen und abhaken. Task-Titel von Teilaufgaben
+ändern und löschen können sie nur mit den bisherigen aufgabenspezifischen
+Rechten. Admin, Projekt-Eigentümer, berechtigte Task-Ersteller und zugewiesene
+Ein-Personen-Gruppen können Teilaufgaben hinzufügen; Admin, Projekt-Eigentümer
+und Task-Ersteller behalten ihre Löschrechte, berechtigte
+Ein-Personen-Zuweisungen dürfen eigene Unteraufgaben löschen. Die API liefert
+die jeweiligen Berechtigungen.
 
 Änderungen werden unabhängig von „Speichern“ sofort übernommen; Schließen des
 Task-Dialogs nimmt sie nicht zurück. Der Status der Hauptaufgabe bleibt unabhängig.

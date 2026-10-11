@@ -796,7 +796,7 @@ class _TaskDialogState extends State<_TaskDialog> {
                             ? 'nur lokale Gruppen'
                             : 'nicht ändern'}\n'
                         'Unteraufgaben: ${widget.task!.canCreateSubtasks
-                            ? 'erstellen, Titel ändern und abhaken'
+                            ? 'erstellen und abhaken'
                             : _canChangeStatus
                             ? 'abhaken'
                             : 'nur lesen'}\n'
