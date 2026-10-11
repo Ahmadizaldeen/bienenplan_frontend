@@ -4,6 +4,8 @@ BienenPlan ist eine plattformübergreifende Flutter-Anwendung zur gemeinsamen
 Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 über eine REST-API aus dem BienenPlan-Backend geladen und verwaltet.
 
+Frontend-Repository: <https://github.com/Ahmadizaldeen/bienenplan_frontend>
+
 ## Aktueller Stand
 
 - Startscreen mit Navigation zu Anmeldung und Registrierung
@@ -11,6 +13,9 @@ Planung und Verwaltung von Projekten, Containern und Aufgaben. Die Daten werden
 - Automatischer Login beim App-Start, Abmelden und Löschen der lokalen Sitzung
 - Prüfung der Backend-Erreichbarkeit direkt vom Startscreen
 - Home-Ansicht mit Sidebar, Projektübersicht und zentralem Pull-to-Refresh
+- Automatische Aktualisierung über den Änderungs-Feed des Backends:
+  Polling alle 5 Sekunden, stilles Neuladen bei Änderungen und sichtbare
+  Fehlerhinweise mit Wiederholungsmöglichkeit
 - Projekte über die REST-API laden, erstellen und auswählen
 - Projektaktionen verwenden die API-Rechte `can_edit`, `can_delete` und
   `can_manage_groups`, nicht die Eigentümeranzeige. Admins können dadurch alle
@@ -55,7 +60,8 @@ Benutzer
         └── Container
               └── Aufgaben
                     ├── Gruppen-Zuweisungen
-                    └── Anhang
+                    ├── Teilaufgaben
+                    └── Anhänge
 ```
 
 
@@ -73,10 +79,54 @@ lib/
 │   ├── home/      Home-Screen, Sidebar und Projektübersicht
 │   ├── projects/  Projektmodell, Repository, lokaler Store, Controller und Liste
 │   ├── settings/  Einstellungsdialog
+│   ├── subtasks/  Teilaufgabenmodell, Repository, Controller und Checkliste
+│   ├── sync/      Änderungs-Feed, Repository und ChangePoller
 │   ├── user/      Benutzermodelle (inkl. GroupUser), Profilzustand und Profilbild-Upload
 │   └── tasks/     Aufgaben-, Container- und Gruppenmodelle, Repositories,
 │                  Controller, Container-Ansicht, TaskDialog und CreateGroupDialog
 └── main.dart      Einstiegspunkt und Auto-Login-Prüfung
+```
+
+## Automatische Aktualisierung
+
+Die Home-Ansicht verwendet `ChangePoller` aus
+[`lib/features/sync/application/change_poller.dart`](lib/features/sync/application/change_poller.dart).
+Das injizierbare `ChangeRepository` fragt den authentifizierten Endpunkt
+`GET /api/changes` ab. Dafür muss das Backend den Änderungs-Feed unterstützen.
+Es handelt sich um Polling, nicht um WebSockets oder eine Offline-Synchronisierung.
+
+- Vor dem initialen Laden wird ohne Cursor eine Baseline abgefragt. Weitere
+  Abfragen senden den vom Backend gelieferten, opaken `next_cursor` als
+  `after`-Parameter unverändert zurück; der Cursor bleibt nur im Speicher.
+- Im Normalbetrieb erfolgt die nächste Abfrage nach 5 Sekunden. Entscheidend
+  für ein Neuladen ist `refresh_required`, nicht die Auswertung einzelner
+  Einträge in `changes`.
+- Bei erforderlicher Aktualisierung werden Projekte, Aufgaben, Container und
+  das Benutzerprofil still neu geladen. Bisherige Daten bleiben währenddessen
+  sichtbar, ohne zusätzlichen Ladeindikator. Manuelles Aktualisieren per Button
+  oder Pull-to-Refresh bleibt verfügbar und zeigt weiterhin den Ladezustand.
+- Der neue Cursor wird erst nach einem vollständig erfolgreichen Refresh
+  übernommen. Nach fehlgeschlagener Baseline oder fehlgeschlagenem initialem
+  Laden wird ein erneuter Refresh eingeplant, damit Änderungen nicht verloren gehen.
+- Offene Aufgaben-Dialoge behalten ihre Eingaben. Geänderte Berechtigungen oder
+  eine nicht mehr sichtbare Aufgabe werden durch einen Hinweis angezeigt;
+  die verbindliche Rechteprüfung bleibt beim Backend.
+- Bei inaktiver App pausiert das Polling; beim Fortsetzen wird sofort abgefragt.
+  Abmelden beendet das Polling, beim Entfernen der Home-Ansicht werden Timer
+  und Listener aufgeräumt.
+- Fehler erscheinen in der Home-Ansicht mit „Jetzt versuchen“. Automatische
+  Wiederholungen verwenden exponentiellen Backoff bis maximal 60 Sekunden;
+  Feed-Anfragen haben ein Timeout von 15 Sekunden.
+- Ein ungültiger Cursor (`400`) führt zu einer neuen Baseline mit anschließendem
+  Refresh. Bei abgelaufener Sitzung (`401`) stoppt das Polling mit dem Hinweis,
+  sich erneut anzumelden.
+
+Die Logik und ihre Home-/Dialog-Integration sind durch
+[`test/change_poller_test.dart`](test/change_poller_test.dart) und
+[`test/home_change_polling_test.dart`](test/home_change_polling_test.dart) abgedeckt:
+
+```bash
+flutter test test/change_poller_test.dart test/home_change_polling_test.dart
 ```
 
 ## Aufgaben und Gruppen
@@ -243,25 +293,26 @@ Farben ausserhalb der zentralen Palette.
 - Suche und Kennzahlen der Projektübersicht mit echten Daten verknüpfen
 - Kommentare zu Aufgaben unterstützen
 - Container bearbeiten oder löschen
-- Gruppenberechtigungen, Rollen und Zugriffsrechte in der Oberfläche abbilden
+- Darstellung der Gruppenberechtigungen, Rollen und Zugriffsrechte weiter ausbauen
 - Responsive Darstellung für Web und Desktop weiter verfeinern
-- Konfigurierbare Backend-URL für Entwicklungs- und Produktionsumgebungen
 
 ## Voraussetzungen
 
-- Flutter SDK mit Dart SDK
-- Laufendes BienenPlan-Backend
+- Flutter SDK mit Dart SDK passend zur SDK-Vorgabe `^3.13.2` in `pubspec.yaml`
+- Laufendes BienenPlan-Backend mit Unterstützung für `GET /api/changes`
 - Chrome oder ein anderes unterstütztes Flutter-Zielgerät
 
 Flutter installieren: <https://docs.flutter.dev/install/manual>
 
 Die aktuell verwendeten Versionen und Abhängigkeiten stehen in
 `pubspec.yaml`. Das Projekt verwendet unter anderem `http`,
-`flutter_secure_storage` und `file_picker`.
+`flutter_secure_storage`, `file_picker`, `provider` und `flutter_animate`.
 
 ## Installation und Start
 
 ```bash
+git clone https://github.com/Ahmadizaldeen/bienenplan_frontend.git
+cd bienenplan_frontend
 flutter pub get
 flutter run -d chrome
 ```
@@ -273,7 +324,12 @@ flutter analyze
 flutter test
 ```
 
-Die Backend-Basis-URL wird in `lib/core/api/api_endpoints.dart` zusammengesetzt.
+Die Backend-Basis-URL wird in
+[`lib/core/api/api_endpoints.dart`](lib/core/api/api_endpoints.dart) zusammengesetzt.
+Sie lässt sich beim Starten und beim Release-Build über
+`--dart-define=API_SERVER_BASE_URL=...` überschreiben. Die Adresse enthält den
+Backend-Pfad, aber kein abschließendes `/api`; diesen Präfix ergänzt die App.
+Ohne Build-Parameter gelten die plattformspezifischen Vorgaben aus dieser Datei.
 Für ein physisches Android-Gerät muss der Rechner und das Gerät im selben WLAN
 sein. Starte die App mit der LAN-IP des Rechners und dem Apache-Port:
 
@@ -288,6 +344,17 @@ zulassen.
 Wenn ein Apache-VirtualHost direkt auf `backend/public` zeigt, gib
 statt des Projektpfads nur den Host und ggf. Port an, z. B.
 `API_SERVER_BASE_URL=http://192.168.1.25:8080`.
+
+## Web-Deployment
+
+Der Workflow
+[`.github/workflows/jekyll-gh-pages.yml`](.github/workflows/jekyll-gh-pages.yml)
+baut bei einem Push auf `main` oder manueller Ausführung die Flutter-Web-App und
+veröffentlicht sie auf GitHub Pages. Die App verwendet den Basispfad
+`/bienenplan_frontend/`. Die Backend-Adresse wird im Build-Schritt über
+`API_SERVER_BASE_URL` gesetzt und muss für die Zielumgebung erreichbar sein.
+Für eine über HTTPS ausgelieferte Web-App muss auch das Backend über HTTPS
+erreichbar sein und Anfragen vom Frontend-Origin erlauben.
 
 ## Backend
 
