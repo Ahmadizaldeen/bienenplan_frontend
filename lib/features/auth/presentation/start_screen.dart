@@ -94,7 +94,6 @@ class _StartScreenState extends State<StartScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Der Farbverlauf bildet den Hintergrund.
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -104,71 +103,113 @@ class _StartScreenState extends State<StartScreen> {
               ),
             ),
           ),
-          // Center positioniert das Startformular in der Bildschirmmitte.
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: GlassContainer(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  // mainAxisSize.min verhindert, dass die Spalte unnötig
-                  // die gesamte Bildschirmhöhe einnimmt.
-                  mainAxisSize: MainAxisSize.min,
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 440),
+                              child: GlassContainer(
+                                padding: const EdgeInsets.all(AppSpacing.xl),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.hive_outlined,
+                                      size: 72,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      'BienenPlan',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineLarge,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Aufgaben gemeinsam planen und verwalten.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: AppSpacing.xl),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () =>
+                                            AppRouter.goToLogin(context),
+                                        icon: const Icon(Icons.login),
+                                        label: const Text('Anmelden'),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () =>
+                                            AppRouter.goToRegister(context),
+                                        icon: const Icon(
+                                          Icons.person_add_outlined,
+                                        ),
+                                        label: const Text('Registrieren'),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    IconButton(
+                                      onPressed: _isCheckingApi
+                                          ? null
+                                          : _showApiStatus,
+                                      tooltip: 'API-Status prüfen',
+                                      icon: _isCheckingApi
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.info_outline),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.center,
                   children: [
-                    Icon(
-                      Icons.hive_outlined,
-                      size: 72,
-                      color: Theme.of(context).colorScheme.onSurface,
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRouter.imprint),
+                      child: const Text('Impressum'),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'BienenPlan',
-                      style: Theme.of(context).textTheme.headlineLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Aufgaben gemeinsam planen und verwalten.',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        // push öffnet den Login über dem Startscreen.
-                        // pop im Login führt später wieder hierher zurück.
-                        onPressed: () => AppRouter.goToLogin(context),
-                        icon: const Icon(Icons.login),
-                        label: const Text('Anmelden'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => AppRouter.goToRegister(context),
-                        icon: const Icon(Icons.person_add_outlined),
-                        label: const Text('Registrieren'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    IconButton(
-                      // Während der Anfrage verhindert null einen zweiten Klick.
-                      onPressed: _isCheckingApi ? null : _showApiStatus,
-                      tooltip: 'API-Status prüfen',
-                      // Je nach Zustand wird ein Spinner oder das Info-Icon gezeigt.
-                      icon: _isCheckingApi
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.info_outline),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRouter.privacy),
+                      child: const Text('Datenschutz'),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ],
