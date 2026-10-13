@@ -13,6 +13,8 @@ class SubtaskSection extends StatelessWidget {
     required this.repository,
     required this.onChanged,
     required this.onBusyChanged,
+    this.draftSubtasks = const [],
+    this.onDraftSubtasksChanged,
     this.disabled = false,
   });
 
@@ -20,6 +22,8 @@ class SubtaskSection extends StatelessWidget {
   final SubtaskRepositoryContract repository;
   final VoidCallback onChanged;
   final ValueChanged<bool> onBusyChanged;
+  final List<String> draftSubtasks;
+  final ValueChanged<List<String>>? onDraftSubtasksChanged;
   final bool disabled;
 
   @override
@@ -27,20 +31,17 @@ class SubtaskSection extends StatelessWidget {
     final persistedTaskId = taskId;
     // Unsaved tasks show the section without sending requests with a missing ID.
     if (persistedTaskId == null) {
-      return const ListTile(
-        key: ValueKey('subtask-section'),
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(Icons.info_outline),
-        title: Text('Teilaufgaben'),
-        subtitle: Text(
-          'Teilaufgaben können nach dem Erstellen der Aufgabe hinzugefügt und bearbeitet werden.',
-        ),
+      return _NewTaskSubtaskSection(
+        draftSubtasks: draftSubtasks,
+        onDraftSubtasksChanged: onDraftSubtasksChanged,
+        disabled: disabled,
       );
     }
     return ChangeNotifierProvider(
       key: ValueKey(persistedTaskId),
       create: (_) =>
-          SubtaskController(taskId: persistedTaskId, repository: repository),
+          SubtaskController(taskId: persistedTaskId, repository: repository)
+            ..load(),
       child: _SubtaskSectionBody(
         disabled: disabled,
         onChanged: onChanged,
@@ -48,6 +49,106 @@ class SubtaskSection extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NewTaskSubtaskSection extends StatelessWidget {
+  const _NewTaskSubtaskSection({
+    required this.draftSubtasks,
+    required this.onDraftSubtasksChanged,
+    required this.disabled,
+  });
+
+  final List<String> draftSubtasks;
+  final ValueChanged<List<String>>? onDraftSubtasksChanged;
+  final bool disabled;
+
+  Future<void> _edit(BuildContext context, [int? index]) async {
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => _SubtaskTitleDialog(
+        initialTitle: index == null ? null : draftSubtasks[index],
+      ),
+    );
+    if (title == null || disabled) return;
+
+    final updated = [...draftSubtasks];
+    if (index == null) {
+      updated.add(title);
+    } else {
+      updated[index] = title;
+    }
+    onDraftSubtasksChanged?.call(updated);
+  }
+
+  void _remove(int index) {
+    if (disabled) return;
+    final updated = [...draftSubtasks]..removeAt(index);
+    onDraftSubtasksChanged?.call(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    key: const ValueKey('subtask-section'),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [
+          Text(
+            'Teilaufgaben',
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.primary
+                    .withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+            onPressed: disabled || onDraftSubtasksChanged == null
+                ? null
+                : () => _edit(context),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Teilaufgabe hinzufügen'),
+          ),
+        ],
+      ),
+      for (var index = 0; index < draftSubtasks.length; index++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Row(
+            key: ValueKey('draft-subtask-$index'),
+            children: [
+              const Icon(Icons.check_box_outline_blank),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(draftSubtasks[index])),
+              IconButton(
+                tooltip: 'Teilaufgabe bearbeiten',
+                onPressed: disabled ? null : () => _edit(context, index),
+                icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                tooltip: 'Teilaufgabe entfernen',
+                onPressed: disabled ? null : () => _remove(index),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
 }
 
 class _SubtaskSectionBody extends StatefulWidget {
@@ -66,6 +167,14 @@ class _SubtaskSectionBody extends StatefulWidget {
 }
 
 class _SubtaskSectionBodyState extends State<_SubtaskSectionBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<SubtaskController>().load();
+    });
+  }
+
   Future<void> _run(Future<bool> Function() action) async {
     widget.onBusyChanged(true);
     try {
@@ -124,82 +233,108 @@ class _SubtaskSectionBodyState extends State<_SubtaskSectionBody> {
   Widget build(BuildContext context) {
     final controller = context.watch<SubtaskController>();
     final busy = widget.disabled || controller.mutating || controller.loading;
-    return ExpansionTile(
+    return Column(
       key: const ValueKey('subtask-section'),
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      title: const Text('Teilaufgaben'),
-      onExpansionChanged: (expanded) {
-        if (expanded) controller.load();
-      },
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (controller.loading) const LinearProgressIndicator(),
-        if (controller.loaded && controller.items.isEmpty)
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Noch keine Teilaufgaben.'),
-          ),
-        for (final item in controller.items)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-            child: Row(
-              key: ValueKey('subtask-${item.id}'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Checkbox(
-                  value: item.completed,
-                  semanticLabel: item.title,
-                  onChanged: busy || !item.canComplete
-                      ? null
-                      : (value) {
-                          if (value != null) {
-                            _run(
-                              () => controller.update(item, completed: value),
-                            );
-                          }
-                        },
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          children: [
+            Text(
+              'Teilaufgaben',
+              style:
+                  Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold) ??
+                  const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            if (controller.canCreate)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Text(
-                      item.title,
-                      style: TextStyle(
-                        decoration: item.completed
-                            ? TextDecoration.lineThrough
-                            : null,
+                onPressed: busy ? null : () => _edit(controller),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Teilaufgabe hinzufügen'),
+              ),
+          ],
+        ),
+        if (controller.loading) ...[
+          const SizedBox(height: AppSpacing.xs),
+          const LinearProgressIndicator(),
+        ],
+        if (controller.items.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          for (final item in controller.items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Row(
+                key: ValueKey('subtask-${item.id}'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: item.completed,
+                    semanticLabel: item.title,
+                    onChanged: busy || !item.canComplete
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              _run(
+                                () => controller.update(item, completed: value),
+                              );
+                            }
+                          },
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        item.title,
+                        style: TextStyle(
+                          decoration: item.completed
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (item.canEdit)
-                  IconButton(
-                    tooltip: 'Teilaufgabe bearbeiten',
-                    onPressed: busy ? null : () => _edit(controller, item),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                if (item.canDelete)
-                  IconButton(
-                    tooltip: 'Teilaufgabe loeschen',
-                    onPressed: busy ? null : () => _delete(controller, item),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-              ],
+                  if (item.canEdit)
+                    IconButton(
+                      tooltip: 'Teilaufgabe bearbeiten',
+                      onPressed: busy ? null : () => _edit(controller, item),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                  if (item.canDelete)
+                    IconButton(
+                      tooltip: 'Teilaufgabe loeschen',
+                      onPressed: busy ? null : () => _delete(controller, item),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                ],
+              ),
             ),
-          ),
-        if (controller.canCreate)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: busy ? null : () => _edit(controller),
-              icon: const Icon(Icons.add),
-              label: const Text('Teilaufgabe hinzufuegen'),
-            ),
-          ),
-        if (controller.mutating) const LinearProgressIndicator(),
-        if (controller.error != null)
+        ],
+        if (controller.mutating) ...[
+          const SizedBox(height: AppSpacing.xs),
+          const LinearProgressIndicator(),
+        ],
+        if (controller.error != null) ...[
+          const SizedBox(height: AppSpacing.xs),
           Align(
             alignment: Alignment.centerLeft,
             child: Column(
@@ -217,6 +352,7 @@ class _SubtaskSectionBodyState extends State<_SubtaskSectionBody> {
               ],
             ),
           ),
+        ],
       ],
     );
   }
