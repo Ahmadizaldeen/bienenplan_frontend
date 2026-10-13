@@ -52,6 +52,16 @@ Frontend-Repository: <https://github.com/Ahmadizaldeen/bienenplan_frontend>
 - Light- und Dark-Theme mit wiederverwendbaren Glass-UI-Komponenten
 - Responsive Darstellung der Home- und Aufgabenansicht für schmale Smartphone-Displays
 
+## Rechtliche Informationen
+
+Impressum und Datenschutzerklärung sind vom Startscreen aus erreichbar; der
+Datenschutzhinweis ist außerdem im Registrierungsformular verlinkt. Beide
+Dokumente sind derzeit ausdrücklich Entwürfe. Vor öffentlicher Nutzung müssen
+insbesondere die Betreiber-Kontaktdaten, Speicher- und Löschfristen sowie die
+Datenschutz- und Vertragsbedingungen der verwendeten GitHub- und ngrok-Konten
+ergänzt und geprüft werden. Das Backend läuft aktuell lokal unter XAMPP und ist
+über einen öffentlichen ngrok-Tunnel erreichbar.
+
 ## Domänenmodell
 
 ```text

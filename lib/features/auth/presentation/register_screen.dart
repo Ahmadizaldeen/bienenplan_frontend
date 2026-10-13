@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
 
   late final RegisterController _controller;
+  late final TapGestureRecognizer _privacyLinkRecognizer;
   bool _obscurePassword = true;
 
   @override
@@ -32,6 +34,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.initState();
     _controller = RegisterController(authRepository: widget.authRepository);
     _controller.addListener(_handleControllerUpdate);
+    _privacyLinkRecognizer = TapGestureRecognizer()..onTap = _openPrivacyPage;
+  }
+
+  void _openPrivacyPage() {
+    Navigator.of(context).pushNamed(AppRouter.privacy);
   }
 
   void _handleControllerUpdate() {
@@ -43,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _controller.removeListener(_handleControllerUpdate);
     _controller.dispose();
+    _privacyLinkRecognizer.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -91,165 +99,255 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: IgnorePointer(child: RegisterLiquidBackground()),
           ),
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IconButton(
-                        tooltip: 'Zurück',
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ).animate().fadeIn(duration: 300.ms),
-                      const SizedBox(height: AppSpacing.xl),
-                      Container(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainer,
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(color: scheme.outlineVariant),
-                            ),
-                            child: Icon(
-                              Icons.person_add_alt_1_rounded,
-                              color: scheme.primary,
-                              size: 32,
-                            ),
-                          )
-                          .animate()
-                          .fadeIn(duration: 400.ms)
-                          .scale(begin: const Offset(.8, .8)),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                            'Konto erstellen',
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          )
-                          .animate()
-                          .fadeIn(delay: 100.ms, duration: 400.ms)
-                          .slideY(begin: .15),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Registriere dich, um BienenPlan zu nutzen.',
-                        style: Theme.of(context).textTheme.bodyLarge
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
-                      const SizedBox(height: AppSpacing.xl),
-                      GlassContainer(
-                            borderRadius: AppRadius.lg,
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                children: [
-                                  TextFormField(
-                                    controller: _nameController,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Name',
-                                      prefixIcon: Icon(
-                                        Icons.person_outline_rounded,
-                                      ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 472),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            tooltip: 'Zurück',
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ).animate().fadeIn(duration: 300.ms),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                                'Konto erstellen',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      color: scheme.onSurface,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    validator: (value) {
-                                      if (value == null ||
-                                          value.trim().isEmpty) {
-                                        return 'Bitte Name eingeben.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: AppSpacing.md),
-                                  TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    autofillHints: const [AutofillHints.email],
-                                    decoration: const InputDecoration(
-                                      labelText: 'E-Mail',
-                                      prefixIcon: Icon(Icons.email_outlined),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null ||
-                                          value.trim().isEmpty) {
-                                        return 'Bitte E-Mail eingeben.';
-                                      }
-                                      if (!value.contains('@')) {
-                                        return 'Bitte eine gültige E-Mail eingeben.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: AppSpacing.md),
-                                  TextFormField(
-                                    controller: _passwordController,
-                                    obscureText: _obscurePassword,
-                                    autofillHints: const [
-                                      AutofillHints.newPassword,
-                                    ],
-                                    decoration: InputDecoration(
-                                      labelText: 'Passwort',
-                                      prefixIcon: const Icon(
-                                        Icons.lock_outline_rounded,
-                                      ),
-                                      suffixIcon: IconButton(
-                                        tooltip: _obscurePassword
-                                            ? 'Passwort anzeigen'
-                                            : 'Passwort ausblenden',
-                                        onPressed: () => setState(
-                                          () => _obscurePassword =
-                                              !_obscurePassword,
+                              )
+                              .animate()
+                              .fadeIn(delay: 100.ms, duration: 400.ms)
+                              .slideY(begin: .15),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Registriere dich, um BienenPlan zu nutzen.',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
+                          const SizedBox(height: AppSpacing.xl),
+                          GlassContainer(
+                                borderRadius: AppRadius.lg,
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                child: Form(
+                                  key: _formKey,
+                                  child: Column(
+                                    children: [
+                                      TextFormField(
+                                        controller: _nameController,
+                                        textCapitalization:
+                                            TextCapitalization.words,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Name',
+                                          prefixIcon: Icon(
+                                            Icons.person_outline_rounded,
+                                          ),
                                         ),
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.visibility_outlined
-                                              : Icons.visibility_off_outlined,
-                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Bitte Name eingeben.';
+                                          }
+                                          return null;
+                                        },
                                       ),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Bitte Passwort eingeben.';
-                                      }
-                                      if (value.length < 6) {
-                                        return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 52,
-                                    child: ElevatedButton(
-                                      onPressed: _controller.isLoading
-                                          ? null
-                                          : _register,
-                                      child: _controller.isLoading
-                                          ? const SizedBox(
-                                              height: 24,
-                                              width: 24,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                      const SizedBox(height: AppSpacing.md),
+                                      TextFormField(
+                                        controller: _emailController,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        autofillHints: const [
+                                          AutofillHints.email,
+                                        ],
+                                        decoration: const InputDecoration(
+                                          labelText: 'E-Mail',
+                                          prefixIcon: Icon(
+                                            Icons.email_outlined,
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Bitte E-Mail eingeben.';
+                                          }
+                                          if (!value.contains('@')) {
+                                            return 'Bitte eine gültige E-Mail eingeben.';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                      TextFormField(
+                                        controller: _passwordController,
+                                        obscureText: _obscurePassword,
+                                        autofillHints: const [
+                                          AutofillHints.newPassword,
+                                        ],
+                                        decoration: InputDecoration(
+                                          labelText: 'Passwort',
+                                          prefixIcon: const Icon(
+                                            Icons.lock_outline_rounded,
+                                          ),
+                                          suffixIcon: IconButton(
+                                            tooltip: _obscurePassword
+                                                ? 'Passwort anzeigen'
+                                                : 'Passwort ausblenden',
+                                            onPressed: () => setState(
+                                              () => _obscurePassword =
+                                                  !_obscurePassword,
+                                            ),
+                                            icon: Icon(
+                                              _obscurePassword
+                                                  ? Icons.visibility_outlined
+                                                  : Icons
+                                                        .visibility_off_outlined,
+                                            ),
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Bitte Passwort eingeben.';
+                                          }
+                                          if (value.length < 6) {
+                                            return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      FormField<bool>(
+                                        initialValue: false,
+                                        autovalidateMode:
+                                            AutovalidateMode.onUserInteraction,
+                                        validator: (value) =>
+                                            value == true ? null : 'Bitte stimme der Datenschutzerklärung zu.',
+                                        builder: (field) => Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: CheckboxListTile(
+                                                value: field.value ?? false,
+                                                onChanged: field.didChange,
+                                                controlAffinity:
+                                                    ListTileControlAffinity
+                                                        .leading,
+                                                contentPadding: EdgeInsets.zero,
+                                                title: RichText(
+                                                  text: TextSpan(
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium,
+                                                    children: [
+                                                      const TextSpan(
+                                                        text: 'Ich habe die ',
+                                                      ),
+                                                      TextSpan(
+                                                        text: 'Datenschutzerklärung',
+                                                        style: TextStyle(
+                                                          color: Theme.of(
+                                                            context,
+                                                          ).colorScheme.primary,
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .underline,
+                                                        ),
+                                                        recognizer:
+                                                            _privacyLinkRecognizer,
+                                                      ),
+                                                      const TextSpan(
+                                                        text:
+                                                            ' gelesen und stimme der '
+                                                            'dort beschriebenen '
+                                                            'Verarbeitung meiner '
+                                                            'Daten zu.',
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
-                                            )
-                                          : const Text('Registrieren'),
-                                    ),
+                                            ),
+                                            if (field.hasError)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: AppSpacing.md,
+                                                ),
+                                                child: Text(
+                                                  field.errorText!,
+                                                  style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .error,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          onPressed: _controller.isLoading
+                                              ? null
+                                              : _register,
+                                          child: _controller.isLoading
+                                              ? const SizedBox(
+                                                  height: 24,
+                                                  width: 24,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : const Text('Registrieren'),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(
+                                delay: 120.ms,
+                                duration: 700.ms,
+                                curve: Curves.easeOut,
+                              )
+                              .slideY(
+                                begin: .22,
+                                duration: 700.ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .scale(
+                                begin: const Offset(.95, .95),
+                                duration: 700.ms,
+                                curve: Curves.easeOutCubic,
                               ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Center(
+                            child: TextButton(
+                              onPressed: _openPrivacyPage,
+                              child: const Text('Datenschutzerklärung'),
                             ),
-                          )
-                          .animate()
-                          .fadeIn(delay: 260.ms, duration: 500.ms)
-                          .slideY(begin: .12),
-                      const SizedBox(height: AppSpacing.xl),
-                    ],
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
