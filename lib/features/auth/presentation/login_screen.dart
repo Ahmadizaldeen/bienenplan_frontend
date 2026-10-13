@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -127,86 +128,104 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 1,
                         ),
                       ),
-                      child: GlassContainer(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: Text(
-                                  'BienenPlan',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              Form(
-                                key: _formKey,
-                                child: Column(
-                                  children: [
-                                    TextFormField(
-                                      controller: _emailController,
-                                      keyboardType: TextInputType.emailAddress,
-                                      decoration: const InputDecoration(
-                                        labelText: 'E-Mail',
-                                      ),
-                                      validator: (value) {
-                                        if (value == null ||
-                                            value.trim().isEmpty) {
-                                          return 'Bitte E-Mail eingeben.';
-                                        }
-                                        if (!value.contains('@')) {
-                                          return 'Bitte eine gültige E-Mail eingeben.';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                    const SizedBox(height: AppSpacing.md),
-                                    TextFormField(
-                                      controller: _passwordController,
-                                      obscureText: _obscurePassword,
-                                      decoration: InputDecoration(
-                                        labelText: 'Passwort',
-                                        suffixIcon: IconButton(
-                                          tooltip: _obscurePassword
-                                              ? 'Passwort anzeigen'
-                                              : 'Passwort ausblenden',
-                                          onPressed: () => setState(
-                                            () => _obscurePassword =
-                                                !_obscurePassword,
-                                          ),
-                                          icon: Icon(
-                                            _obscurePassword
-                                                ? Icons.visibility
-                                                : Icons.visibility_off,
-                                          ),
+                      child:
+                          GlassContainer(
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.sm),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: Text(
+                                          'BienenPlan',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium,
                                         ),
                                       ),
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Bitte Passwort eingeben.';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                  ],
+                                      const SizedBox(height: AppSpacing.lg),
+                                      Form(
+                                        key: _formKey,
+                                        child: Column(
+                                          children: [
+                                            TextFormField(
+                                              controller: _emailController,
+                                              keyboardType:
+                                                  TextInputType.emailAddress,
+                                              decoration: const InputDecoration(
+                                                labelText: 'E-Mail',
+                                              ),
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.trim().isEmpty) {
+                                                  return 'Bitte E-Mail eingeben.';
+                                                }
+                                                if (!value.contains('@')) {
+                                                  return 'Bitte eine gültige E-Mail eingeben.';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                            const SizedBox(
+                                              height: AppSpacing.md,
+                                            ),
+                                            TextFormField(
+                                              controller: _passwordController,
+                                              obscureText: _obscurePassword,
+                                              decoration: InputDecoration(
+                                                labelText: 'Passwort',
+                                                suffixIcon: IconButton(
+                                                  tooltip: _obscurePassword
+                                                      ? 'Passwort anzeigen'
+                                                      : 'Passwort ausblenden',
+                                                  onPressed: () => setState(
+                                                    () => _obscurePassword =
+                                                        !_obscurePassword,
+                                                  ),
+                                                  icon: Icon(
+                                                    _obscurePassword
+                                                        ? Icons.visibility
+                                                        : Icons.visibility_off,
+                                                  ),
+                                                ),
+                                              ),
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.isEmpty) {
+                                                  return 'Bitte Passwort eingeben.';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      _controller.isLoading
+                                          ? const CircularProgressIndicator()
+                                          : ElevatedButton(
+                                              onPressed: _login,
+                                              child: const Text('Login'),
+                                            ),
+                                    ],
+                                  ),
                                 ),
+                              )
+                              .animate()
+                              .fadeIn(duration: 650.ms, curve: Curves.easeOut)
+                              .slideY(
+                                begin: .18,
+                                duration: 650.ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .scale(
+                                begin: const Offset(.96, .96),
+                                duration: 650.ms,
+                                curve: Curves.easeOutCubic,
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                              _controller.isLoading
-                                  ? const CircularProgressIndicator()
-                                  : ElevatedButton(
-                                      onPressed: _login,
-                                      child: const Text('Login'),
-                                    ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ),
                   ),
                 ),
