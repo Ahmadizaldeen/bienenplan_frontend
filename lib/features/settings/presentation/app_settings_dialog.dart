@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../user/application/user_controller.dart';
 import '../../user/presentation/profile_avatar.dart';
@@ -112,6 +113,26 @@ class AppSettingsDialog extends StatelessWidget {
                 icon: Icons.security_outlined,
                 title: 'Sicherheit',
                 subtitle: 'Passwort und Zugriff',
+              ),
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Datenschutzerklärung',
+                subtitle: 'Informationen zur Verarbeitung deiner Daten',
+                onTap: () {
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
+                  navigator.pushNamed(AppRouter.privacy);
+                },
+              ),
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: 'Impressum',
+                subtitle: 'Betreiber- und Kontaktangaben',
+                onTap: () {
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
+                  navigator.pushNamed(AppRouter.imprint);
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
               Align(
