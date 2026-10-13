@@ -89,6 +89,120 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
 
   Future<void> _createGroup() => _openGroupEditor();
 
+  Future<void> _addPerson() async {
+    if (_isLoading ||
+        _busyGroupId != null ||
+        _loadFailed ||
+        !widget.project.canManageGroups) {
+      return;
+    }
+    setState(() {
+      _error = null;
+      _isLoading = true;
+    });
+
+    final List<GroupUser> users;
+    try {
+      users = await widget.controller.fetchUsers();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = error.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (users.isEmpty) {
+      setState(() => _error = 'Keine Benutzer verfügbar.');
+      return;
+    }
+
+    final user = await showDialog<GroupUser>(
+      context: context,
+      builder: (context) => _ProjectPersonPickerDialog(users: users),
+    );
+    if (user == null || !mounted) return;
+
+    setState(() {
+      _error = null;
+      _isLoading = true;
+    });
+    final String? name;
+    try {
+      name = await _personGroupName(user);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = error.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
+    if (!mounted) return;
+    if (name == null) {
+      setState(() {
+        _isLoading = false;
+        _error ??=
+            'Für diese Person konnte keine lokale Gruppe angelegt werden.';
+      });
+      return;
+    }
+
+    final success = await widget.controller.createProjectGroup(
+      widget.project.id,
+      name,
+      [user.id],
+    );
+    if (!mounted) return;
+    if (!success) {
+      setState(() {
+        _isLoading = false;
+        _error = widget.controller.errorMessage;
+      });
+      return;
+    }
+    await _loadGroups();
+  }
+
+  Future<String?> _personGroupName(GroupUser user) async {
+    final baseName = user.name.trim();
+    if (baseName.isEmpty) {
+      throw Exception('Für diese Person wurde kein Benutzername übermittelt.');
+    }
+
+    for (var suffix = 0; suffix <= _groups.length; suffix++) {
+      final ending = suffix == 0 ? '' : ' (${suffix + 1})';
+      final maxBaseLength = 100 - ending.runes.length;
+      final candidate =
+          '${String.fromCharCodes(baseName.runes.take(maxBaseLength))}$ending';
+      ProjectGroup? existing;
+      for (final group in _groups) {
+        if (!group.isGlobal &&
+            group.projectId == widget.project.id &&
+            group.name == candidate) {
+          existing = group;
+          break;
+        }
+      }
+      if (existing == null) return candidate;
+
+      final members = await widget.controller.fetchGroupUsers(existing.id);
+      if (existing.memberCount == 1 &&
+          members.length == 1 &&
+          members.single.id == user.id) {
+        if (mounted) {
+          setState(
+            () => _error = '${user.name} ist bereits einzeln zugewiesen.',
+          );
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
   Future<void> _openGroupEditor([ProjectGroup? group]) async {
     if (_isLoading ||
         _busyGroupId != null ||
@@ -160,27 +274,42 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final localGroups = _groups
+        .where(
+          (group) =>
+              !group.isGlobal &&
+              group.projectId == widget.project.id &&
+              group.personalUserId == null,
+        )
+        .toList();
+    final globalGroups = _groups
+        .where(
+          (group) =>
+              group.isGlobal &&
+              group.projectId == null &&
+              group.personalUserId == null,
+        )
+        .toList();
     return AlertDialog(
       scrollable: true,
-      title: Text('Projektgruppen: ${widget.project.name}'),
+      title: const Text('Projektgruppen verwalten'),
       content: SizedBox(
         width: 420,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          _busyGroupId == null &&
-                              !_loadFailed &&
-                              widget.project.canManageGroups
-                          ? _createGroup
-                          : null,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Neue lokale Gruppe'),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.folder_outlined),
+                    title: Text(
+                      widget.project.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    subtitle: Text(
+                      'Erstellt am: ${_formatProjectDate(widget.project.createdAt)}',
                     ),
                   ),
                   if (_error != null)
@@ -198,63 +327,51 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
                       onPressed: _loadGroups,
                       child: const Text('Erneut versuchen'),
                     ),
-                  if (_groups.isEmpty && !_loadFailed)
-                    const Text('Es sind keine Gruppen vorhanden.')
-                  else if (_groups.isNotEmpty)
-                    SizedBox(
-                      height: 320,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _groups.length,
-                        itemBuilder: (context, index) {
-                          final group = _groups[index];
-                          final isBusy = _busyGroupId == group.id;
-                          final scope = group.isGlobal
-                              ? 'Global'
-                              : 'Nur dieses Projekt';
-                          final count = group.memberCount;
-                          final membersLabel = count == 1
-                              ? 'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar'
-                              : '$count Teilnehmer';
-                          return CheckboxListTile(
-                            value: _assignedIds.contains(group.id),
-                            title: Text(group.name),
-                            subtitle: Text(
-                              count == null ? scope : '$scope\n$membersLabel',
-                            ),
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                            secondary: isBusy
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : !group.isGlobal &&
-                                      group.projectId == widget.project.id &&
-                                      widget.project.canManageGroups
-                                ? IconButton(
-                                    tooltip: 'Gruppe bearbeiten',
-                                    icon: const Icon(Icons.edit_outlined),
-                                    onPressed:
-                                        _busyGroupId != null || _loadFailed
-                                        ? null
-                                        : () => _openGroupEditor(group),
-                                  )
-                                : null,
-                            onChanged:
-                                _busyGroupId != null ||
-                                    _loadFailed ||
-                                    !widget.project.canManageGroups
-                                ? null
-                                : (value) =>
-                                      _setAssigned(group, value ?? false),
-                          );
-                        },
-                      ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Zuweisung hinzufügen',
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
+                  ),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed:
+                            _busyGroupId == null &&
+                                !_loadFailed &&
+                                widget.project.canManageGroups
+                            ? _createGroup
+                            : null,
+                        icon: const Icon(Icons.group_add_outlined),
+                        label: const Text('Neue lokale Gruppe'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed:
+                            _busyGroupId == null &&
+                                !_loadFailed &&
+                                widget.project.canManageGroups
+                            ? _addPerson
+                            : null,
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                        label: const Text('Person direkt hinzufügen'),
+                      ),
+                    ],
+                  ),
+                  if (!_loadFailed) ...[
+                    _buildGroupSection(
+                      title: 'Lokale Gruppen und Personen',
+                      groups: localGroups,
+                      emptyText: 'Keine lokalen Gruppen zugewiesen.',
+                    ),
+                    _buildGroupSection(
+                      title: 'Globale Gruppen',
+                      groups: globalGroups,
+                      emptyText: 'Keine globalen Gruppen verfügbar.',
+                    ),
+                  ],
                 ],
               ),
       ),
@@ -262,6 +379,130 @@ class _ProjectGroupsDialogState extends State<ProjectGroupsDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Schließen'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupSection({
+    required String title,
+    required List<ProjectGroup> groups,
+    required String emptyText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
+          child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+        ),
+        if (groups.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Text(emptyText),
+          )
+        else
+          ...groups.map((group) {
+            final isBusy = _busyGroupId == group.id;
+            final count = group.memberCount;
+            final subtitle = count == null
+                ? null
+                : count == 1
+                ? 'Ein Teilnehmer: Aufgabe, Beschreibung und Frist bearbeitbar'
+                : '$count Personen';
+            return CheckboxListTile(
+              value: _assignedIds.contains(group.id),
+              title: Text(group.name),
+              subtitle: subtitle == null ? null : Text(subtitle),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              secondary: isBusy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : !group.isGlobal && widget.project.canManageGroups
+                  ? IconButton(
+                      tooltip: 'Gruppe bearbeiten',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: _busyGroupId != null || _loadFailed
+                          ? null
+                          : () => _openGroupEditor(group),
+                    )
+                  : null,
+              onChanged:
+                  _busyGroupId != null ||
+                      _loadFailed ||
+                      !widget.project.canManageGroups
+                  ? null
+                  : (value) => _setAssigned(group, value ?? false),
+            );
+          }),
+      ],
+    );
+  }
+
+  String _formatProjectDate(String? value) {
+    if (value == null || value.isEmpty) return 'Nicht verfügbar';
+    final date = DateTime.tryParse(value);
+    if (date == null) return 'Nicht verfügbar';
+    return '${date.day.toString().padLeft(2, '0')}.'
+        '${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+}
+
+class _ProjectPersonPickerDialog extends StatefulWidget {
+  const _ProjectPersonPickerDialog({required this.users});
+
+  final List<GroupUser> users;
+
+  @override
+  State<_ProjectPersonPickerDialog> createState() =>
+      _ProjectPersonPickerDialogState();
+}
+
+class _ProjectPersonPickerDialogState
+    extends State<_ProjectPersonPickerDialog> {
+  int? _selectedUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Person direkt hinzufügen'),
+      content: SizedBox(
+        width: 420,
+        height: 300,
+        child: ListView.builder(
+          itemCount: widget.users.length,
+          itemBuilder: (context, index) {
+            final user = widget.users[index];
+            final isSelected = _selectedUserId == user.id;
+            return ListTile(
+              selected: isSelected,
+              leading: Icon(
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+              ),
+              title: Text(user.name),
+              onTap: () => setState(() => _selectedUserId = user.id),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          onPressed: _selectedUserId == null
+              ? null
+              : () => Navigator.of(context).pop(
+                  widget.users.firstWhere((user) => user.id == _selectedUserId),
+                ),
+          child: const Text('Hinzufügen'),
         ),
       ],
     );
@@ -337,6 +578,13 @@ class _ProjectGroupEditorDialogState extends State<_ProjectGroupEditorDialog> {
   }
 
   void _submit() {
+    if (widget.group == null && _userIds.length < 2) {
+      setState(
+        () => _error =
+            'Bitte mindestens zwei Personen für eine Gruppe auswählen.',
+      );
+      return;
+    }
     if (_userIds.isEmpty) {
       setState(() => _error = 'Bitte mindestens einen Benutzer auswählen.');
       return;
@@ -375,18 +623,20 @@ class _ProjectGroupEditorDialogState extends State<_ProjectGroupEditorDialog> {
                   labelText: _userIds.length == 1
                       ? 'Gruppenname (optional)'
                       : 'Gruppenname',
-                  helperText: _userIds.length == 1
-                      ? 'Ohne Gruppennamen wird der Benutzername verwendet.'
+                  helperText: widget.group != null && _userIds.length == 1
+                      ? 'Bei einer Ein-Personen-Gruppe wird der Benutzername verwendet.'
                       : null,
                 ),
                 validator: (value) =>
-                    _userIds.length != 1 &&
+                    !(widget.group != null && _userIds.length == 1) &&
                         (value == null || value.trim().isEmpty)
                     ? 'Bitte einen Gruppennamen eingeben.'
                     : null,
               ),
               Text(
-                'Benutzer auswählen',
+                widget.group == null
+                    ? 'Mindestens zwei Personen auswählen'
+                    : 'Benutzer auswählen',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               SizedBox(
