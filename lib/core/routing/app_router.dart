@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/legal/presentation/legal_information_screen.dart';
 import '../../features/tasks/presentation/task_container_screen.dart';
 
 class AppRouter {
@@ -14,6 +15,8 @@ class AppRouter {
   static const String register = '/register';
   static const String home = '/home';
   static const String taskList = '/tasks';
+  static const String imprint = '/impressum';
+  static const String privacy = '/datenschutz';
 
   static Future<void> logoutAndNavigateToLogin(BuildContext context) async {
     final apiClient = ApiClient();
@@ -48,6 +51,18 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => TaskListScreen(),
+        );
+      case imprint:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) =>
+              const LegalInformationScreen(document: LegalDocument.imprint),
+        );
+      case privacy:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) =>
+              const LegalInformationScreen(document: LegalDocument.privacy),
         );
       default:
         return MaterialPageRoute(
