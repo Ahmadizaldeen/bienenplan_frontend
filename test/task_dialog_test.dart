@@ -111,6 +111,7 @@ class _PermissionAwareTaskRepository implements TaskRepositoryContract {
   int titleDeadlineWrites = 0;
   ApiException? statusError;
   bool failRefresh = false;
+  bool createCalled = false;
   @override
   Future<void> updateTaskTitleDeadline(
     int taskId,
@@ -192,7 +193,10 @@ class _PermissionAwareTaskRepository implements TaskRepositoryContract {
     String status = 'open',
     String? deadline,
     String? attachment,
-  }) async => 1;
+  }) async {
+    createCalled = true;
+    return 1;
+  }
 }
 
 class _EmptyAttachments extends TaskAttachmentRepository {
@@ -204,6 +208,24 @@ class _EmptySubtasks extends SubtaskRepository {
   @override
   Future<SubtaskList> list(int taskId) async =>
       SubtaskList(items: [], canCreate: false);
+}
+
+class _PendingSubtasks extends _EmptySubtasks {
+  @override
+  Future<SubtaskList> list(int taskId) async => SubtaskList(
+    items: [
+      Subtask(
+        id: 1,
+        taskId: taskId,
+        title: 'Offener Schritt',
+        completed: false,
+        canEdit: false,
+        canDelete: false,
+        canComplete: true,
+      ),
+    ],
+    canCreate: false,
+  );
 }
 
 class _TaskApi extends ApiClient {
@@ -223,6 +245,7 @@ Future<void> _openLimitedTask(
   bool canEditTitleDeadline = true,
   bool canEdit = false,
   bool canManageLocalGroups = false,
+  SubtaskRepositoryContract? subtaskRepository,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -233,7 +256,7 @@ Future<void> _openLimitedTask(
             controller: controller,
             containerId: 1,
             projectId: 4,
-            subtaskRepository: _EmptySubtasks(),
+            subtaskRepository: subtaskRepository ?? _EmptySubtasks(),
             task: Task(
               id: 9,
               containerId: 1,
@@ -693,6 +716,7 @@ void main() {
                   controller: controller,
                   containerId: 1,
                   projectId: 4,
+                  subtaskRepository: _EmptySubtasks(),
                   task: Task(
                     id: 9,
                     containerId: 1,
@@ -734,6 +758,100 @@ void main() {
       expect(repository.updateCalled, isFalse);
     },
   );
+
+  testWidgets('does not complete a task while a subtask is still open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(650, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = _PermissionAwareTaskRepository();
+    final controller = TaskController(
+      taskRepository: repository,
+      containerRepository: _TestContainerRepository(),
+      groupRepository: _FakeGroupRepository(),
+    );
+    addTearDown(controller.dispose);
+
+    await _openLimitedTask(
+      tester,
+      controller,
+      subtaskRepository: _PendingSubtasks(),
+    );
+    final dropdown = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(dropdown);
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erledigt').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(repository.statusCalled, isFalse);
+    expect(
+      find.textContaining('Noch 1 offene Teilaufgabe ist'),
+      findsOneWidget,
+    );
+    expect(find.text('Aufgabe bearbeiten'), findsOneWidget);
+  });
+
+  testWidgets('does not create a completed task with draft subtasks', (
+    tester,
+  ) async {
+    final repository = _PermissionAwareTaskRepository();
+    final controller = TaskController(
+      taskRepository: repository,
+      containerRepository: _TestContainerRepository(),
+      groupRepository: _FakeGroupRepository(),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showTaskDialog(
+                context,
+                controller: controller,
+                containerId: 1,
+                projectId: 4,
+                subtaskRepository: _EmptySubtasks(),
+              ),
+              child: const Text('Dialog öffnen'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Dialog öffnen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Neue Aufgabe');
+
+    await tester.ensureVisible(find.text('Teilaufgabe hinzufügen'));
+    await tester.tap(find.text('Teilaufgabe hinzufügen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Offener Schritt');
+    await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+    await tester.pumpAndSettle();
+
+    final dropdown = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(dropdown);
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erledigt').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Erstellen'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalled, isFalse);
+    expect(
+      find.textContaining('Noch 1 offene Teilaufgabe ist'),
+      findsOneWidget,
+    );
+    expect(find.text('Offener Schritt'), findsOneWidget);
+  });
 
   testWidgets('selects groups from dropdown and shows only selected groups', (
     tester,

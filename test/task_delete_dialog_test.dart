@@ -17,11 +17,26 @@ import 'package:bienenplan_frontend/features/subtasks/data/subtask_repository.da
 
 class _UnexpectedSubtaskRepository extends SubtaskRepository {
   int loads = 0;
+  final List<(int taskId, String title)> created = [];
 
   @override
   Future<SubtaskList> list(int taskId) async {
     loads++;
-    throw StateError('Unsaved tasks must not load subtasks');
+    return SubtaskList(items: const [], canCreate: true);
+  }
+
+  @override
+  Future<Subtask> create(int taskId, String title) async {
+    created.add((taskId, title));
+    return Subtask(
+      id: created.length,
+      taskId: taskId,
+      title: title,
+      completed: false,
+      canEdit: true,
+      canDelete: true,
+      canComplete: true,
+    );
   }
 }
 
@@ -226,7 +241,7 @@ void main() {
     expect(taskRepository.tasks, hasLength(1));
   });
 
-  testWidgets('new task shows subtasks without loading before saving', (
+  testWidgets('new task can add subtasks before saving the task', (
     tester,
   ) async {
     final subtaskRepository = _UnexpectedSubtaskRepository();
@@ -262,23 +277,28 @@ void main() {
       greaterThan(tester.getBottomLeft(find.text('Frist wählen')).dy),
     );
     expect(
-      tester.getTopLeft(find.text('Teilaufgaben')).dy,
-      lessThan(tester.getTopLeft(find.text('Anhänge')).dy),
-    );
-    expect(
       find.text(
         'Teilaufgaben können nach dem Erstellen der Aufgabe hinzugefügt und bearbeitet werden.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.byType(ExpansionTile), findsNothing);
-    expect(find.text('Teilaufgabe hinzufuegen'), findsNothing);
-    expect(
-      tester
-          .widget<ListTile>(find.byKey(const ValueKey('subtask-section')))
-          .onTap,
-      isNull,
-    );
+    expect(find.text('Teilaufgabe hinzufügen'), findsOneWidget);
     expect(subtaskRepository.loads, 0);
+
+    await tester.ensureVisible(find.text('Teilaufgabe hinzufügen'));
+    await tester.tap(find.text('Teilaufgabe hinzufügen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Erster Schritt');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(find.text('Erster Schritt'), findsOneWidget);
+    expect(subtaskRepository.loads, 0);
+
+    await tester.ensureVisible(find.byType(TextFormField).first);
+    await tester.enterText(find.byType(TextFormField).first, 'Neue Aufgabe');
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(subtaskRepository.created, [(8, 'Erster Schritt')]);
   });
 }

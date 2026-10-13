@@ -8,6 +8,7 @@ class Project {
   final bool canManageGroups;
   final bool canRestore;
   final String? archivedAt;
+  final String? createdAt;
 
   const Project({
     required this.id,
@@ -18,6 +19,7 @@ class Project {
     this.canManageGroups = false,
     this.canRestore = false,
     this.archivedAt,
+    this.createdAt,
   });
 
   static bool _flag(dynamic value) =>
@@ -38,6 +40,7 @@ class Project {
       canManageGroups: _flag(json['can_manage_groups']),
       canRestore: _flag(json['can_restore']),
       archivedAt: json['archived_at'] as String?,
+      createdAt: json['created_at']?.toString(),
     );
   }
 

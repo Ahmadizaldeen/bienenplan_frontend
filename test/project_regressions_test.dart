@@ -474,14 +474,42 @@ void main() {
     );
   });
 
+  testWidgets('project dialog displays creation date and adds one person', (
+    tester,
+  ) async {
+    final repository = _Projects();
+    final controller = _controller(repository);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProjectGroupsDialog(
+          project: const Project(
+            id: 1,
+            name: 'Projekt',
+            canManageGroups: true,
+            createdAt: '2025-03-07 12:00:00',
+          ),
+          controller: controller,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Erstellt am: 07.03.2025'), findsOneWidget);
+    await tester.tap(find.text('Person direkt hinzufügen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Max'));
+    await tester.pump();
+    await tester.tap(find.text('Hinzufügen'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdGroupProjectId, 1);
+    expect(repository.createdGroupName, 'Max');
+    expect(repository.createdGroupUserIds, [1]);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final scenario in [
-    (participants: 1, enteredName: '', expectedName: 'Max'),
-    (participants: 1, enteredName: '   ', expectedName: 'Max'),
-    (
-      participants: 1,
-      enteredName: '  Eigener Name  ',
-      expectedName: 'Eigener Name',
-    ),
     (participants: 2, enteredName: '  Team  ', expectedName: 'Team'),
   ]) {
     testWidgets(
@@ -529,50 +557,55 @@ void main() {
     );
   }
 
-  testWidgets(
-    'requires participants and a name for multiple users, then accepts one user without name',
-    (tester) async {
-      final repository = _Projects()
-        ..users = const [
-          GroupUser(id: 1, name: 'Max'),
-          GroupUser(id: 2, name: 'Anna'),
-        ];
-      final controller = _controller(repository);
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ProjectGroupsDialog(project: _project, controller: controller),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Neue lokale Gruppe'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Erstellen'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Bitte mindestens einen Benutzer auswählen.'),
-        findsOneWidget,
-      );
-      expect(repository.createdGroupName, isNull);
+  testWidgets('local group creation requires multiple people and a name', (
+    tester,
+  ) async {
+    final repository = _Projects()
+      ..users = const [
+        GroupUser(id: 1, name: 'Max'),
+        GroupUser(id: 2, name: 'Anna'),
+      ];
+    final controller = _controller(repository);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProjectGroupsDialog(project: _project, controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Neue lokale Gruppe'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Bitte mindestens zwei Personen für eine Gruppe auswählen.'),
+      findsOneWidget,
+    );
+    expect(repository.createdGroupName, isNull);
 
-      await tester.tap(find.text('Max'));
-      await tester.tap(find.text('Anna'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Erstellen'));
-      await tester.pumpAndSettle();
-      expect(find.text('Bitte einen Gruppennamen eingeben.'), findsOneWidget);
-      expect(repository.createdGroupName, isNull);
+    await tester.tap(find.text('Max'));
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Bitte mindestens zwei Personen für eine Gruppe auswählen.'),
+      findsOneWidget,
+    );
+    expect(repository.createdGroupName, isNull);
 
-      await tester.tap(find.text('Max'));
-      await tester.pumpAndSettle();
-      expect(find.text('Gruppenname (optional)'), findsOneWidget);
-      await tester.tap(find.text('Erstellen'));
-      await tester.pumpAndSettle();
-      expect(repository.createdGroupName, 'Anna');
-      expect(repository.createdGroupUserIds, [2]);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await tester.tap(find.text('Anna'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bitte einen Gruppennamen eingeben.'), findsOneWidget);
+    expect(repository.createdGroupName, isNull);
+
+    await tester.enterText(find.byType(TextFormField), 'Team');
+    await tester.tap(find.text('Erstellen'));
+    await tester.pumpAndSettle();
+    expect(repository.createdGroupName, 'Team');
+    expect(repository.createdGroupUserIds, [1, 2]);
+    expect(tester.takeException(), isNull);
+  });
 
   final mutations =
       <String, Future<ProjectMutationResult> Function(ProjectController)>{

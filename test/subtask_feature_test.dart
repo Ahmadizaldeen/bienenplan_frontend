@@ -201,7 +201,7 @@ void main() {
   );
 
   for (final width in [320.0, 900.0]) {
-    testWidgets('lazy checklist supports CRUD without overflow at $width', (
+    testWidgets('subtask checklist supports CRUD without overflow at $width', (
       tester,
     ) async {
       tester.view.physicalSize = Size(width, 900);
@@ -231,8 +231,6 @@ void main() {
           ),
         ),
       );
-      expect(repository.loads, 0);
-      await tester.tap(find.text('Teilaufgaben'));
       await tester.pumpAndSettle();
       expect(repository.loads, 1);
       await tester.tap(find.byType(Checkbox));
@@ -240,7 +238,7 @@ void main() {
       expect(repository.items.first.completed, isTrue);
       expect(changes, 1);
       expect(busy, [true, false]);
-      await tester.tap(find.text('Teilaufgabe hinzufuegen'));
+      await tester.tap(find.text('Teilaufgabe hinzufügen'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), 'Zweiter Schritt');
       await tester.tap(find.text('Speichern'));
@@ -262,10 +260,6 @@ void main() {
       await tester.tap(find.text('Loeschen'));
       await tester.pumpAndSettle();
       expect(find.text('Umbenannt'), findsNothing);
-      await tester.tap(find.text('Teilaufgaben'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Teilaufgaben'));
-      await tester.pumpAndSettle();
       expect(repository.loads, 1);
       expect(tester.takeException(), isNull);
     });

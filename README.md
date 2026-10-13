@@ -246,8 +246,18 @@ Ein-Personen-Zuweisungen dürfen eigene Unteraufgaben löschen. Die API liefert
 die jeweiligen Berechtigungen.
 
 Änderungen werden unabhängig von „Speichern“ sofort übernommen; Schließen des
-Task-Dialogs nimmt sie nicht zurück. Der Status der Hauptaufgabe bleibt unabhängig.
-Bei Fehlern bleiben die bisherigen Daten erhalten und erneutes Laden ist möglich.
+Task-Dialogs nimmt sie nicht zurück. Der Status der Hauptaufgabe bleibt
+grundsätzlich unabhängig von Teilaufgaben; als erledigt darf die Aufgabe aber
+erst markiert werden, wenn alle Unteraufgaben abgehakt sind. Vor dem Speichern
+prüft der Task-Dialog die gespeicherten Unteraufgaben erneut. Auch neu
+eingegebene Entwurfs-Unteraufgaben zählen: Solange mindestens eine Unteraufgabe
+offen ist, wird das Markieren als erledigt blockiert. Kann der Dialog die
+Unteraufgaben nicht laden und prüfen, blockiert er den Abschluss ebenfalls und
+zeigt eine Fehlermeldung an. Tests decken offene gespeicherte Unteraufgaben und
+offene Entwurfs-Unteraufgaben ab.
+
+Bei anderen Fehlern bleiben die bisherigen Daten erhalten und erneutes Laden
+ist möglich.
 Das Backend benötigt zuvor die Subtask-Migration `003_add_subtask_permissions.sql`
 (bei einem frischen Schema nicht erforderlich).
 

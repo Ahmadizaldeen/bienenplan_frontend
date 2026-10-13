@@ -171,23 +171,24 @@ class _ProjectEditorDialogState extends State<ProjectEditorDialog> {
                 OutlinedButton.icon(
                   onPressed: _isSaving ? null : _manageGroups,
                   icon: const Icon(Icons.groups_outlined),
-                  label: const Text('Projektgruppen verwalten'),
+                  label: const Text('Zuweisung & Verwaltung'),
                 ),
               ],
-              if (_isEditing && widget.project!.canDelete)
-                TextButton.icon(
-                  onPressed: _isSaving ? null : _archiveProject,
-                  icon: const Icon(Icons.archive_outlined),
-                  label: const Text('Projekt archivieren'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                ),
             ],
           ),
         ),
       ),
       actions: [
+        if (_isEditing && widget.project!.canDelete)
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _archiveProject,
+            icon: const Icon(Icons.archive_outlined),
+            label: const Text('Projekt archivieren'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+          ),
         TextButton(
           onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
           child: const Text('Abbrechen'),

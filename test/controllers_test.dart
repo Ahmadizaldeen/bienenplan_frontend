@@ -754,7 +754,7 @@ void main() {
     await tester.tap(find.byTooltip('Projekt bearbeiten').first);
     await tester.pumpAndSettle();
     expect(find.text('Projekt bearbeiten'), findsOneWidget);
-    expect(find.text('Projektgruppen verwalten'), findsOneWidget);
+    expect(find.text('Zuweisung & Verwaltung'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), 'Überarbeitet');
     await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
@@ -808,9 +808,14 @@ void main() {
   });
 
   test('Project.fromJson parses varied formats', () {
-    final p1 = Project.fromJson({'id': 1, 'name': 'P1'});
+    final p1 = Project.fromJson({
+      'id': 1,
+      'name': 'P1',
+      'created_at': '2025-03-07 12:00:00',
+    });
     expect(p1.id, 1);
     expect(p1.name, 'P1');
+    expect(p1.createdAt, '2025-03-07 12:00:00');
 
     final p2 = Project.fromJson({'id': '2', 'title': 'P2'});
     expect(p2.id, 2);
