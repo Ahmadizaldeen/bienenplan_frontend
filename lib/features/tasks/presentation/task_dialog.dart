@@ -92,6 +92,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   List<Group> _allGroups = const [];
   late final Set<int> _assignedGroupIds;
   int? _createdTaskId;
+  List<String> _draftSubtasks = [];
   List<({String name, Uint8List bytes})> _queuedFiles = [];
   List<TaskAttachment> _attachments = [];
   // Ob die Aufgabe beim Öffnen in der Liste des Controllers enthalten war;
@@ -111,9 +112,11 @@ class _TaskDialogState extends State<_TaskDialog> {
       widget.task == null || widget.task!.canManageGroups;
   bool _canManageGroup(Group group) =>
       !group.isPersonal &&
-      (group.isGlobal || group.projectId == widget.projectId) &&
+      (group.isGlobal ||
+          group.projectId == null ||
+          group.projectId == widget.projectId) &&
       (_canManageGroups ||
-          (widget.task!.canManageLocalGroups && !group.isGlobal));
+          ((widget.task?.canManageLocalGroups ?? false) && !group.isGlobal));
   bool get _hasFieldChanges =>
       _textController.text != _savedText || _deadline != _savedDeadline;
   bool get _hasStatusChange => _status != _savedStatus;
@@ -458,6 +461,59 @@ class _TaskDialogState extends State<_TaskDialog> {
     }
   }
 
+  Future<bool> _saveDraftSubtasks(int taskId) async {
+    while (_draftSubtasks.isNotEmpty) {
+      try {
+        await widget.subtaskRepository.create(taskId, _draftSubtasks.first);
+      } catch (error) {
+        if (!mounted) return false;
+        setState(() {
+          _error = error is ApiException
+              ? error.message
+              : 'Teilaufgaben konnten nicht gespeichert werden: $error';
+        });
+        return false;
+      }
+      if (!mounted) return false;
+      _draftSubtasks.removeAt(0);
+      _changed = true;
+    }
+    if (mounted) setState(() {});
+    return true;
+  }
+
+  Future<bool> _ensureSubtasksCompleted(int? taskId) async {
+    var incompleteCount = _draftSubtasks.length;
+    if (taskId != null) {
+      try {
+        final subtasks = await widget.subtaskRepository.list(taskId);
+        if (!mounted) return false;
+        incompleteCount += subtasks.items
+            .where((item) => !item.completed)
+            .length;
+      } catch (error) {
+        if (!mounted) return false;
+        setState(() {
+          _error =
+              'Unteraufgaben konnten nicht geprüft werden: '
+              '${error is ApiException ? error.message : error}';
+        });
+        return false;
+      }
+    }
+
+    if (incompleteCount == 0) return true;
+    final label = incompleteCount == 1
+        ? 'Teilaufgabe ist'
+        : 'Teilaufgaben sind';
+    setState(() {
+      _error =
+          'Noch $incompleteCount offene $label. '
+          'Bitte hake alle ab, bevor du die Aufgabe als erledigt markierst.';
+    });
+    return false;
+  }
+
   Future<void> _submit() async {
     if (_isSaving ||
         _isUploading ||
@@ -468,7 +524,35 @@ class _TaskDialogState extends State<_TaskDialog> {
     }
     final taskId = _taskId;
 
-    if (taskId != null && !_hasAnyTaskChange && _queuedFiles.isEmpty) {
+    if (_status == 'done' && _savedStatus != 'done') {
+      setState(() {
+        _isSaving = true;
+        _error = null;
+      });
+      final subtasksCompleted = await _ensureSubtasksCompleted(taskId);
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      if (!subtasksCompleted) return;
+    }
+
+    if (taskId != null && _draftSubtasks.isNotEmpty) {
+      setState(() {
+        _isSaving = true;
+        _error = null;
+      });
+      final subtasksSaved = await _saveDraftSubtasks(taskId);
+      if (!mounted) return;
+      if (!subtasksSaved) {
+        setState(() => _isSaving = false);
+        return;
+      }
+      setState(() => _isSaving = false);
+    }
+
+    if (taskId != null &&
+        !_hasAnyTaskChange &&
+        _queuedFiles.isEmpty &&
+        _draftSubtasks.isEmpty) {
       if (mounted) Navigator.of(context).pop(_changed);
       return;
     }
@@ -548,6 +632,10 @@ class _TaskDialogState extends State<_TaskDialog> {
       _createdTaskId = createdTaskId;
       _rememberSavedFields();
       _changed = true;
+      if (!await _saveDraftSubtasks(createdTaskId)) {
+        if (mounted) setState(() => _isSaving = false);
+        return;
+      }
       if (!await _uploadQueuedFiles(createdTaskId)) {
         if (mounted) setState(() => _isSaving = false);
         return;
@@ -742,335 +830,117 @@ class _TaskDialogState extends State<_TaskDialog> {
           (group) =>
               !_assignedGroupIds.contains(group.id) &&
               (_canManageGroups ||
-                  !widget.task!.canManageLocalGroups ||
+                  !(widget.task?.canManageLocalGroups ?? false) ||
                   _canManageGroup(group)),
         )
         .toList();
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.lg,
+      ),
       title: Text(_isEditing ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'),
       content: SizedBox(
-        width: 420,
+        width: 1050,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            // Platz für das schwebende Label, sonst schneidet der Scrollbereich es ab.
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_remoteChanged) ...[
-                  Container(
-                    key: const ValueKey('task-dialog-remote-changed'),
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.tertiaryContainer,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Text(
-                      'Diese Aufgabe oder deine Rechte wurden zwischenzeitlich '
-                      'geändert. Schließe den Dialog und öffne ihn erneut, um '
-                      'den aktuellen Stand zu sehen.',
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onTertiaryContainer,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                if (_isEditing) ...[
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    title: const Text('Deine Rechte'),
-                    children: [
-                      Text(
-                        'Aufgabe/Beschreibung: ${_canEdit ? 'bearbeiten' : 'nur lesen'}\n'
-                        'Frist: ${_canEditTitleDeadline ? 'ändern' : 'nur lesen'}\n'
-                        'Status: ${_canChangeStatus ? 'ändern' : 'nur lesen'}\n'
-                        'Gruppenzuweisung: ${_canManageGroups
-                            ? 'lokale und globale Projektgruppen'
-                            : widget.task!.canManageLocalGroups
-                            ? 'nur lokale Gruppen'
-                            : 'nicht ändern'}\n'
-                        'Unteraufgaben: ${widget.task!.canCreateSubtasks
-                            ? 'erstellen und abhaken'
-                            : _canChangeStatus
-                            ? 'abhaken'
-                            : 'nur lesen'}\n'
-                        'Unteraufgaben löschen: abhängig von Rolle und Ersteller; siehe Eintrag.\n'
-                        'Aufgabe löschen: ${widget.task!.canDelete ? 'erlaubt' : 'nicht erlaubt'}',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                if (_isEditing) ...[
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
-                    subtitle: const Text('Erstellt von:'),
-                    title: Text(
-                      widget.task!.creatorName.isEmpty
-                          ? 'Unbekannt'
-                          : widget.task!.creatorName,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                TextFormField(
-                  controller: _textController,
-                  enabled: _canEditTitleDeadline && !_isSaving,
-                  autofocus: !_isEditing,
-                  keyboardType: _titleDeadlineOnly
-                      ? TextInputType.text
-                      : TextInputType.multiline,
-                  minLines: _titleDeadlineOnly ? 1 : 3,
-                  maxLines: _titleDeadlineOnly ? 1 : 10,
-                  maxLength: _titleDeadlineOnly ? 100 : null,
-                  decoration: InputDecoration(
-                    labelText: _titleDeadlineOnly ? 'Titel' : 'Aufgabe',
-                    alignLabelWithHint: true,
-                  ),
-                  validator: (value) => _titleDeadlineOnly
-                      ? (value == null || value.trim().isEmpty
-                            ? 'Bitte einen Titel eingeben.'
-                            : null)
-                      : parseTaskText(value ?? '') == null
-                      ? 'Beschreibe die Aufgabe.'
-                      : null,
-                ),
-                if (_titleDeadlineOnly &&
-                    widget.task!.description.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(widget.task!.description),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  initialValue: _status,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  items: _statusOptions.entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isTwoColumn = constraints.maxWidth >= 680;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_remoteChanged) ...[
+                      Container(
+                        key: const ValueKey('task-dialog-remote-changed'),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .tertiaryContainer,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (widget.task == null || _canChangeStatus)
-                      ? (value) {
-                          if (value != null) setState(() => _status = value);
-                        }
-                      : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Gruppen-Zuweisung',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                if (_isLoadingGroups)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (availableGroups.isEmpty)
-                        Text(
-                          _allGroups.isEmpty
-                              ? 'Diesem Projekt sind noch keine Gruppen zugeordnet.'
-                              : 'Alle vorhandenen Gruppen sind ausgewählt.',
-                        )
-                      else
-                        DropdownButtonFormField<Group>(
-                          key: ValueKey(selectedGroupIds.join(',')),
-                          initialValue: null,
-                          isExpanded: true,
-                          hint: const Text('Gruppe auswählen'),
-                          items: availableGroups
-                              .map(
-                                (group) => DropdownMenuItem<Group>(
-                                  value: group,
-                                  child: Text(
-                                    group.label,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged:
-                              (_canManageGroups ||
-                                      widget.task!.canManageLocalGroups) &&
-                                  !_groupChangeBusy
-                              ? (group) {
-                                  if (group != null) _toggleGroup(group, true);
-                                }
-                              : null,
-                        ),
-                      if (_assignedGroupIds.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text('Keine Gruppen ausgewählt.'),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.xs,
-                            children: _allGroups
-                                .where(
-                                  (group) =>
-                                      _assignedGroupIds.contains(group.id),
-                                )
-                                .map(
-                                  (group) => InputChip(
-                                    label: Text(group.label),
-                                    onDeleted:
-                                        (_isSaving ||
-                                            _groupChangeBusy ||
-                                            !_canManageGroup(group))
-                                        ? null
-                                        : () => _toggleGroup(group, false),
-                                  ),
-                                )
-                                .toList(),
+                        child: Text(
+                          'Diese Aufgabe oder deine Rechte wurden zwischenzeitlich '
+                          'geändert. Schließe den Dialog und öffne ihn erneut, um '
+                          'den aktuellen Stand zu sehen.',
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onTertiaryContainer,
                           ),
                         ),
-                    ],
-                  ),
-                const SizedBox(height: AppSpacing.md),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final controls = [
-                      TextButton.icon(
-                        onPressed: _isSaving || !_canEditTitleDeadline
-                            ? null
-                            : _pickDeadline,
-                        icon: const Icon(Icons.event),
-                        label: const Text('Frist wählen'),
                       ),
-                      if (_deadline != null)
-                        IconButton(
-                          tooltip: 'Frist entfernen',
-                          onPressed: _isSaving || !_canEditTitleDeadline
-                              ? null
-                              : () => setState(() => _deadline = null),
-                          icon: const Icon(Icons.clear),
-                        ),
-                    ];
-                    if (constraints.maxWidth < 350) {
-                      return Column(
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_isEditing) ...[
+                      _buildHeaderInfo(context, isTwoColumn),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    if (isTwoColumn)
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_deadlineLabel),
-                          Wrap(children: controls),
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: Text(_deadlineLabel)),
-                        ...controls,
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                SubtaskSection(
-                  taskId: _taskId,
-                  repository: widget.subtaskRepository,
-                  disabled: _isSaving || _isDeleting || _isUploading,
-                  onChanged: () => _changed = true,
-                  onBusyChanged: (busy) {
-                    if (mounted) setState(() => _subtasksBusy = busy);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text('Anhänge', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: AppSpacing.xs),
-                if (_attachments.isEmpty && _queuedFiles.isEmpty)
-                  const Text('Noch keine Dateien hochgeladen'),
-                for (final attachment in _attachments)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.insert_drive_file_outlined),
-                    title: Text(
-                      attachment.originalName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      '${(attachment.sizeBytes / 1024).toStringAsFixed(1)} KB',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Herunterladen',
-                          onPressed: () => _downloadAttachment(attachment),
-                          icon: const Icon(Icons.download),
-                        ),
-                        if (attachment.canDelete)
-                          IconButton(
-                            tooltip: 'Anhang löschen',
-                            onPressed: _isUploading
-                                ? null
-                                : () => _deleteAttachment(attachment),
-                            icon: const Icon(Icons.delete_outline),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildDetailsSection(context),
+                                const SizedBox(height: AppSpacing.md),
+                                _buildSubtasksSection(context),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
-                  ),
-                for (final file in _queuedFiles)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      file.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: const Text('Upload ausstehend'),
-                    trailing: IconButton(
-                      tooltip: 'Auswahl entfernen',
-                      onPressed: _isUploading
-                          ? null
-                          : () => setState(() => _queuedFiles.remove(file)),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _isUploading || _isSaving
-                        ? null
-                        : _pickAndUploadFile,
-                    icon: _isUploading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.upload_file),
-                    label: Text('Dateien hinzufügen'),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
-              ],
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildGroupsSection(
+                                  context,
+                                  selectedGroupIds,
+                                  availableGroups,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                _buildAttachmentsSection(context),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildDetailsSection(context),
+                          const SizedBox(height: AppSpacing.md),
+                          _buildGroupsSection(
+                            context,
+                            selectedGroupIds,
+                            availableGroups,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _buildSubtasksSection(context),
+                          const SizedBox(height: AppSpacing.md),
+                          _buildAttachmentsSection(context),
+                        ],
+                      ),
+                    if (_error != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -1133,6 +1003,426 @@ class _TaskDialogState extends State<_TaskDialog> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeaderInfo(BuildContext context, bool isTwoColumn) {
+    final creatorWidget = ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.person_outline),
+      subtitle: const Text('Erstellt von:'),
+      title: Text(
+        widget.task!.creatorName.isEmpty
+            ? 'Unbekannt'
+            : widget.task!.creatorName,
+      ),
+    );
+
+    final rightsWidget = ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: const Text('Deine Rechte'),
+      children: [
+        Text(
+          'Aufgabe/Beschreibung: ${_canEdit ? 'bearbeiten' : 'nur lesen'}\n'
+          'Frist: ${_canEditTitleDeadline ? 'ändern' : 'nur lesen'}\n'
+          'Status: ${_canChangeStatus ? 'ändern' : 'nur lesen'}\n'
+          'Gruppenzuweisung: ${_canManageGroups
+              ? 'lokale und globale Projektgruppen'
+              : widget.task!.canManageLocalGroups
+              ? 'nur lokale Gruppen'
+              : 'nicht ändern'}\n'
+          'Unteraufgaben: ${widget.task!.canCreateSubtasks
+              ? 'erstellen und abhaken'
+              : _canChangeStatus
+              ? 'abhaken'
+              : 'nur lesen'}\n'
+          'Unteraufgaben löschen: abhängig von Rolle und Ersteller; siehe Eintrag.\n'
+          'Aufgabe löschen: ${widget.task!.canDelete ? 'erlaubt' : 'nicht erlaubt'}',
+        ),
+      ],
+    );
+
+    if (isTwoColumn) {
+      return Material(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: creatorWidget),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: rightsWidget),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        rightsWidget,
+        const SizedBox(height: AppSpacing.sm),
+        creatorWidget,
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.edit_note_outlined,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'Aufgabendetails',
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextFormField(
+            controller: _textController,
+            enabled: _canEditTitleDeadline && !_isSaving,
+            autofocus: !_isEditing,
+            keyboardType: _titleDeadlineOnly
+                ? TextInputType.text
+                : TextInputType.multiline,
+            minLines: _titleDeadlineOnly ? 1 : 3,
+            maxLines: _titleDeadlineOnly ? 1 : 10,
+            maxLength: _titleDeadlineOnly ? 100 : null,
+            decoration: InputDecoration(
+              labelText: _titleDeadlineOnly ? 'Titel' : 'Aufgabe',
+              alignLabelWithHint: true,
+            ),
+            validator: (value) => _titleDeadlineOnly
+                ? (value == null || value.trim().isEmpty
+                      ? 'Bitte einen Titel eingeben.'
+                      : null)
+                : parseTaskText(value ?? '') == null
+                ? 'Beschreibe die Aufgabe.'
+                : null,
+          ),
+          if (_titleDeadlineOnly && widget.task!.description.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(widget.task!.description),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<String>(
+            initialValue: _status,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Status'),
+            items: _statusOptions.entries
+                .map(
+                  (entry) => DropdownMenuItem(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ),
+                )
+                .toList(),
+            onChanged: (widget.task == null || _canChangeStatus)
+                ? (value) {
+                    if (value != null) setState(() => _status = value);
+                  }
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final controls = [
+                TextButton.icon(
+                  onPressed: _isSaving || !_canEditTitleDeadline
+                      ? null
+                      : _pickDeadline,
+                  icon: const Icon(Icons.event),
+                  label: const Text('Frist wählen'),
+                ),
+                if (_deadline != null)
+                  IconButton(
+                    tooltip: 'Frist entfernen',
+                    onPressed: _isSaving || !_canEditTitleDeadline
+                        ? null
+                        : () => setState(() => _deadline = null),
+                    icon: const Icon(Icons.clear),
+                  ),
+              ];
+              if (constraints.maxWidth < 350) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_deadlineLabel),
+                    Wrap(children: controls),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: Text(_deadlineLabel)),
+                  ...controls,
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupsSection(
+    BuildContext context,
+    List<int> selectedGroupIds,
+    List<Group> availableGroups,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.groups_outlined,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'Gruppen-Zuweisung',
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_isLoadingGroups)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (availableGroups.isEmpty)
+                  Text(
+                    _allGroups.isEmpty
+                        ? 'Diesem Projekt sind noch keine Gruppen zugeordnet.'
+                        : 'Alle vorhandenen Gruppen sind ausgewählt.',
+                  )
+                else
+                  DropdownButtonFormField<Group>(
+                    key: ValueKey(selectedGroupIds.join(',')),
+                    initialValue: null,
+                    isExpanded: true,
+                    hint: const Text('Gruppe auswählen'),
+                    items: availableGroups
+                        .map(
+                          (group) => DropdownMenuItem<Group>(
+                            value: group,
+                            child: Text(
+                              group.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged:
+                        (_canManageGroups ||
+                                (widget.task?.canManageLocalGroups ?? false)) &&
+                            !_groupChangeBusy
+                        ? (group) {
+                            if (group != null) _toggleGroup(group, true);
+                          }
+                        : null,
+                  ),
+                if (_assignedGroupIds.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: AppSpacing.sm),
+                    child: Text('Keine Gruppen ausgewählt.'),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.xs,
+                      children: _allGroups
+                          .where(
+                            (group) => _assignedGroupIds.contains(group.id),
+                          )
+                          .map(
+                            (group) => InputChip(
+                              label: Text(group.label),
+                              onDeleted:
+                                  (_isSaving ||
+                                      _groupChangeBusy ||
+                                      !_canManageGroup(group))
+                                  ? null
+                                  : () => _toggleGroup(group, false),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubtasksSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: SubtaskSection(
+        taskId: _taskId,
+        repository: widget.subtaskRepository,
+        disabled: _isSaving || _isDeleting || _isUploading,
+        draftSubtasks: _draftSubtasks,
+        onDraftSubtasksChanged: (subtasks) {
+          setState(() => _draftSubtasks = subtasks);
+        },
+        onChanged: () => _changed = true,
+        onBusyChanged: (busy) {
+          if (mounted) setState(() => _subtasksBusy = busy);
+        },
+      ),
+    );
+  }
+
+  Widget _buildAttachmentsSection(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.attach_file_outlined,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Anhänge',
+                  style: Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (_attachments.isEmpty && _queuedFiles.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Text('Noch keine Dateien hochgeladen'),
+              ),
+            for (final attachment in _attachments)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.insert_drive_file_outlined),
+                title: Text(
+                  attachment.originalName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${(attachment.sizeBytes / 1024).toStringAsFixed(1)} KB',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Herunterladen',
+                      onPressed: () => _downloadAttachment(attachment),
+                      icon: const Icon(Icons.download),
+                    ),
+                    if (attachment.canDelete)
+                      IconButton(
+                        tooltip: 'Anhang löschen',
+                        onPressed: _isUploading
+                            ? null
+                            : () => _deleteAttachment(attachment),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                  ],
+                ),
+              ),
+            for (final file in _queuedFiles)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  file.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: const Text('Upload ausstehend'),
+                trailing: IconButton(
+                  tooltip: 'Auswahl entfernen',
+                  onPressed: _isUploading
+                      ? null
+                      : () => setState(() => _queuedFiles.remove(file)),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _isUploading || _isSaving
+                    ? null
+                    : _pickAndUploadFile,
+                icon: _isUploading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload_file),
+                label: const Text('Dateien hinzufügen'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
