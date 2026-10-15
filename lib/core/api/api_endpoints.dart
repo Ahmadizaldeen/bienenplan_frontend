@@ -68,6 +68,7 @@ class ApiEndpoints {
 
   // Behälter-Routen.
   static String get containers => "$baseUrl/containers";
+  static String container(int id) => "$containers/$id";
 
   // Gruppen-Routen und Zuordnung von Gruppen zu Aufgaben.
   static String get groups => "$baseUrl/groups";

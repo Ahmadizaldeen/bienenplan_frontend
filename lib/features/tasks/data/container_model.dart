@@ -2,14 +2,26 @@ class Container {
   final int id;
   final String title;
   final int? projectId;
+  final bool canManage;
 
-  const Container({required this.id, required this.title, this.projectId});
+  const Container({
+    required this.id,
+    required this.title,
+    this.projectId,
+    this.canManage = false,
+  });
 
-  Container copyWith({int? id, String? title, int? projectId}) {
+  Container copyWith({
+    int? id,
+    String? title,
+    int? projectId,
+    bool? canManage,
+  }) {
     return Container(
       id: id ?? this.id,
       title: title ?? this.title,
       projectId: projectId ?? this.projectId,
+      canManage: canManage ?? this.canManage,
     );
   }
 
@@ -24,6 +36,10 @@ class Container {
                 ? json['project_id'] as int
                 : int.tryParse(json['project_id'].toString()))
           : null,
+      canManage:
+          json['can_manage'] == true ||
+          json['can_manage'] == 1 ||
+          json['can_manage'] == '1',
     );
   }
 
@@ -32,6 +48,7 @@ class Container {
       'id': id,
       'title': title,
       if (projectId != null) 'project_id': projectId,
+      'can_manage': canManage,
     };
   }
 }

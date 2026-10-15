@@ -319,6 +319,21 @@ class TaskController extends ChangeNotifier {
     }
   }
 
+  Future<void> updateContainerTitle(int containerId, String title) async {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      throw ArgumentError('Container-Titel darf nicht leer sein.');
+    }
+
+    await _containerRepository.updateContainerTitle(containerId, trimmedTitle);
+    await loadTasks();
+  }
+
+  Future<void> deleteContainer(int containerId) async {
+    await _containerRepository.deleteContainer(containerId);
+    await loadTasks();
+  }
+
   @override
   void dispose() {
     _disposed = true;

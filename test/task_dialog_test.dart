@@ -50,6 +50,12 @@ class _TestContainerRepository implements ContainerRepositoryContract {
     int? projectId,
   }) async =>
       task_container.Container(id: 1, title: title, projectId: projectId);
+
+  @override
+  Future<void> updateContainerTitle(int containerId, String title) async {}
+
+  @override
+  Future<void> deleteContainer(int containerId) async {}
 }
 
 class _LocalGroups extends _FakeGroupRepository {
