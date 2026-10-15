@@ -90,6 +90,12 @@ class _FakeContainerRepo implements ContainerRepositoryContract {
   Future<List<container_model.Container>> fetchContainers() async => const [
     container_model.Container(id: 10, title: 'Default Container', projectId: 1),
   ];
+
+  @override
+  Future<void> updateContainerTitle(int containerId, String title) async {}
+
+  @override
+  Future<void> deleteContainer(int containerId) async {}
 }
 
 void main() {

@@ -10,6 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
 import '../../user/application/user_controller.dart';
 
+enum _ContainerAction { rename, delete }
+
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({
     super.key,
@@ -292,6 +294,90 @@ class _TaskListScreenState extends State<TaskListScreen> {
     textController.dispose();
   }
 
+  void _handleContainerAction(
+    _ContainerAction action,
+    int containerId,
+    String title,
+  ) {
+    switch (action) {
+      case _ContainerAction.rename:
+        _showRenameContainerDialog(containerId, title);
+      case _ContainerAction.delete:
+        _confirmDeleteContainer(containerId, title);
+    }
+  }
+
+  Future<void> _showRenameContainerDialog(
+    int containerId,
+    String currentTitle,
+  ) async {
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameContainerDialog(currentTitle: currentTitle),
+    );
+    if (!mounted || newTitle == null || newTitle == currentTitle) return;
+
+    try {
+      await _controller.updateContainerTitle(containerId, newTitle);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Container wurde umbenannt.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showContainerActionError('Umbenennen fehlgeschlagen', error);
+    }
+  }
+
+  Future<void> _confirmDeleteContainer(int containerId, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Container löschen?'),
+        content: Text(
+          '„$title“ wird gelöscht. Das ist nur möglich, wenn der Container '
+          'keine aktiven Aufgaben enthält.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    try {
+      await _controller.deleteContainer(containerId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Container wurde gelöscht.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showContainerActionError('Löschen fehlgeschlagen', error);
+    }
+  }
+
+  void _showContainerActionError(String action, Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$action: ${error.toString().replaceFirst('Exception: ', '')}',
+        ),
+        backgroundColor: AppColors.danger,
+      ),
+    );
+  }
+
   Future<void> _showCreateTaskDialog(int containerId) async {
     int? projectId = widget.projectId;
     // Ohne aktive Projektauswahl bestimmt der Container den Scope der Gruppen.
@@ -460,6 +546,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final containerIds = _orderedContainerIds(grouped.keys);
     final canReorderContainers =
         _orderReady && _userController.currentUser != null;
+    final manageableContainerIds = {
+      for (final container in extraContainers)
+        if (container.canManage) container.id,
+    };
 
     Widget buildContainer(
       int containerId, {
@@ -535,6 +625,35 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
+                  if (manageableContainerIds.contains(containerId))
+                    PopupMenuButton<_ContainerAction>(
+                      key: ValueKey('container-settings-$containerId'),
+                      tooltip: 'Container-Einstellungen',
+                      onSelected: (action) => _handleContainerAction(
+                        action,
+                        containerId,
+                        containerTitles[containerId] ?? '',
+                      ),
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: _ContainerAction.rename,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.edit_outlined),
+                            title: Text('Name ändern'),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: _ContainerAction.delete,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.delete_outline),
+                            title: Text('Container löschen'),
+                          ),
+                        ),
+                      ],
+                      icon: const Icon(Icons.settings_outlined),
+                    ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
@@ -745,6 +864,64 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _RenameContainerDialog extends StatefulWidget {
+  const _RenameContainerDialog({required this.currentTitle});
+
+  final String currentTitle;
+
+  @override
+  State<_RenameContainerDialog> createState() => _RenameContainerDialogState();
+}
+
+class _RenameContainerDialogState extends State<_RenameContainerDialog> {
+  late final TextEditingController _textController = TextEditingController(
+    text: widget.currentTitle,
+  );
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Container umbenennen'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _textController,
+          autofocus: true,
+          maxLength: 100,
+          decoration: const InputDecoration(labelText: 'Container-Name'),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Bitte geben Sie einen Container-Namen ein.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() ?? false) {
+              Navigator.of(context).pop(_textController.text.trim());
+            }
+          },
+          child: const Text('Speichern'),
+        ),
+      ],
     );
   }
 }

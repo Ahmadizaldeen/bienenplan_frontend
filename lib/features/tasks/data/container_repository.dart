@@ -5,6 +5,8 @@ import 'container_model.dart';
 abstract class ContainerRepositoryContract {
   Future<List<Container>> fetchContainers();
   Future<Container> createContainer(String title, {int? projectId});
+  Future<void> updateContainerTitle(int containerId, String title);
+  Future<void> deleteContainer(int containerId);
 }
 
 class ContainerRepository implements ContainerRepositoryContract {
@@ -49,5 +51,15 @@ class ContainerRepository implements ContainerRepositoryContract {
       title: title,
       projectId: projectId,
     );
+  }
+
+  @override
+  Future<void> updateContainerTitle(int containerId, String title) async {
+    await _apiClient.put(ApiEndpoints.container(containerId), {'title': title});
+  }
+
+  @override
+  Future<void> deleteContainer(int containerId) async {
+    await _apiClient.delete(ApiEndpoints.container(containerId));
   }
 }

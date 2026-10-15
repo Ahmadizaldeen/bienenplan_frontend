@@ -225,6 +225,9 @@ class _CreateAwareTaskRepository implements TaskRepositoryContract {
 
 class FakeContainerRepository implements ContainerRepositoryContract {
   bool createContainerCalled = false;
+  int? updatedContainerId;
+  String? updatedContainerTitle;
+  int? deletedContainerId;
   String? createdContainerTitle;
   int? createdContainerProjectId;
   final List<container_model.Container> containers = [];
@@ -249,6 +252,24 @@ class FakeContainerRepository implements ContainerRepositoryContract {
     );
     containers.add(container);
     return container;
+  }
+
+  @override
+  Future<void> updateContainerTitle(int containerId, String title) async {
+    updatedContainerId = containerId;
+    updatedContainerTitle = title;
+    final index = containers.indexWhere(
+      (container) => container.id == containerId,
+    );
+    if (index >= 0) {
+      containers[index] = containers[index].copyWith(title: title);
+    }
+  }
+
+  @override
+  Future<void> deleteContainer(int containerId) async {
+    deletedContainerId = containerId;
+    containers.removeWhere((container) => container.id == containerId);
   }
 }
 
@@ -579,6 +600,96 @@ void main() {
       expect(await store.loadOrder(userId: 4), isEmpty);
     },
   );
+
+  test('container model reads backend management permission', () {
+    expect(
+      container_model.Container.fromJson({
+        'id': 4,
+        'title': 'Verwaltbar',
+        'can_manage': 1,
+      }).canManage,
+      isTrue,
+    );
+    expect(
+      container_model.Container.fromJson({
+        'id': 5,
+        'title': 'Nur sichtbar',
+        'can_manage': 0,
+      }).canManage,
+      isFalse,
+    );
+  });
+
+  testWidgets('authorized user can rename and delete an empty container', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final containerRepository = FakeContainerRepository()
+      ..containers.addAll([
+        const container_model.Container(
+          id: 99,
+          title: 'Verwaltbar',
+          canManage: true,
+        ),
+        const container_model.Container(id: 98, title: 'Nur sichtbar'),
+      ]);
+    final taskController = TaskController(
+      taskRepository: FakeTaskRepository(),
+      containerRepository: containerRepository,
+    );
+    final userController = UserController(
+      userRepository: FakeUserRepository(
+        const AppUser(id: 3, name: 'Test', email: 'test@example.com'),
+      ),
+    );
+    await taskController.loadTasks();
+    await userController.loadCurrentUser();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TaskListScreen(
+            controller: taskController,
+            userController: userController,
+            containerOrderStore: FakeContainerOrderStore(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('container-settings-99')), findsOneWidget);
+    expect(find.byKey(const ValueKey('container-settings-98')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('container-settings-99')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Name ändern'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Neuer Name');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(containerRepository.updatedContainerId, 99);
+    expect(containerRepository.updatedContainerTitle, 'Neuer Name');
+    expect(find.text('Neuer Name'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('container-settings-99')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Container löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Löschen'));
+    await tester.pumpAndSettle();
+
+    expect(containerRepository.deletedContainerId, 99);
+    expect(find.text('Neuer Name'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    taskController.dispose();
+    userController.dispose();
+  });
 
   testWidgets('container order is restored and saved when dragged', (
     tester,
