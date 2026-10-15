@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bienenplan_frontend/core/api/api_exception.dart';
 import 'package:bienenplan_frontend/features/auth/application/auth_controller.dart';
@@ -14,8 +15,11 @@ import 'package:bienenplan_frontend/features/projects/data/project_group_model.d
 import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
 import 'package:bienenplan_frontend/features/projects/presentation/project_list_widget.dart';
 import 'package:bienenplan_frontend/features/user/data/user_model.dart';
+import 'package:bienenplan_frontend/features/user/data/user_repository.dart';
+import 'package:bienenplan_frontend/features/user/application/user_controller.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_repository.dart';
+import 'package:bienenplan_frontend/features/tasks/data/container_order_store.dart';
 import 'package:bienenplan_frontend/features/tasks/data/container_model.dart'
     as container_model;
 import 'package:bienenplan_frontend/features/tasks/data/task_model.dart';
@@ -246,6 +250,48 @@ class FakeContainerRepository implements ContainerRepositoryContract {
     containers.add(container);
     return container;
   }
+}
+
+class FakeContainerOrderStore implements ContainerOrderStoreContract {
+  final Map<String, List<int>> orders = {};
+  int? savedUserId;
+  int? savedProjectId;
+  List<int>? savedContainerIds;
+  bool failSave = false;
+
+  String _key(int userId, int? projectId) => '$userId:${projectId ?? 'all'}';
+
+  @override
+  Future<List<int>> loadOrder({required int userId, int? projectId}) async =>
+      orders[_key(userId, projectId)] ?? const [];
+
+  @override
+  Future<void> saveOrder({
+    required int userId,
+    int? projectId,
+    required List<int> containerIds,
+  }) async {
+    if (failSave) throw Exception('Speichern fehlgeschlagen');
+    savedUserId = userId;
+    savedProjectId = projectId;
+    savedContainerIds = List.of(containerIds);
+    orders[_key(userId, projectId)] = List.of(containerIds);
+  }
+}
+
+class FakeUserRepository implements UserRepositoryContract {
+  FakeUserRepository(this.user);
+
+  final AppUser user;
+
+  @override
+  Future<AppUser> fetchCurrentUser() async => user;
+
+  @override
+  Future<AppUser> uploadProfilePicture(
+    Uint8List bytes,
+    String filename,
+  ) async => user;
 }
 
 class FakeRegisterRepository implements AuthRepositoryContract {
@@ -515,6 +561,152 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
+  });
+
+  test(
+    'container order preferences are isolated by user and project',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      const store = SharedPreferencesContainerOrderStore();
+
+      await store.saveOrder(userId: 3, projectId: 7, containerIds: [12, 10]);
+      await store.saveOrder(userId: 3, containerIds: [10, 12]);
+      await store.saveOrder(userId: 4, projectId: 7, containerIds: [10, 12]);
+
+      expect(await store.loadOrder(userId: 3, projectId: 7), [12, 10]);
+      expect(await store.loadOrder(userId: 3), [10, 12]);
+      expect(await store.loadOrder(userId: 4, projectId: 7), [10, 12]);
+      expect(await store.loadOrder(userId: 4), isEmpty);
+    },
+  );
+
+  testWidgets('container order is restored and saved when dragged', (
+    tester,
+  ) async {
+    final containerRepository = FakeContainerRepository()
+      ..containers.addAll([
+        const container_model.Container(id: 11, title: 'Container 11'),
+        const container_model.Container(id: 8, title: 'Container 8'),
+      ]);
+    final taskController = TaskController(
+      taskRepository: FakeTaskRepository(),
+      containerRepository: containerRepository,
+    );
+    final userController = UserController(
+      userRepository: FakeUserRepository(
+        const AppUser(id: 3, name: 'Test', email: 'test@example.com'),
+      ),
+    );
+    final orderStore = FakeContainerOrderStore()..orders['3:all'] = [11, 8, 10];
+    await taskController.loadTasks();
+    await userController.loadCurrentUser();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TaskListScreen(
+            controller: taskController,
+            userController: userController,
+            containerOrderStore: orderStore,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Container 11')).dx,
+      lessThan(tester.getTopLeft(find.text('Container 8')).dx),
+    );
+
+    final dragStart = tester.getCenter(
+      find.byKey(const ValueKey('container-drag-8')),
+    );
+    final dropTarget = tester.getCenter(
+      find.byKey(const ValueKey('container-drop-11')),
+    );
+    final dragGesture = await tester.startGesture(dragStart);
+    await dragGesture.moveTo(dropTarget);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('container-drop-indicator-11')),
+      findsOneWidget,
+    );
+    await dragGesture.up();
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Container 8')).dx,
+      lessThan(tester.getTopLeft(find.text('Container 11')).dx),
+    );
+    expect(orderStore.savedUserId, 3);
+    expect(orderStore.savedProjectId, isNull);
+    expect(orderStore.savedContainerIds, [8, 11, 10]);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    taskController.dispose();
+    userController.dispose();
+  });
+
+  testWidgets('failed container order save restores the previous order', (
+    tester,
+  ) async {
+    final containerRepository = FakeContainerRepository()
+      ..containers.addAll([
+        const container_model.Container(id: 11, title: 'Container 11'),
+        const container_model.Container(id: 8, title: 'Container 8'),
+      ]);
+    final taskController = TaskController(
+      taskRepository: FakeTaskRepository(),
+      containerRepository: containerRepository,
+    );
+    final userController = UserController(
+      userRepository: FakeUserRepository(
+        const AppUser(id: 3, name: 'Test', email: 'test@example.com'),
+      ),
+    );
+    final orderStore = FakeContainerOrderStore()
+      ..orders['3:all'] = [11, 8, 10]
+      ..failSave = true;
+    await taskController.loadTasks();
+    await userController.loadCurrentUser();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TaskListScreen(
+            controller: taskController,
+            userController: userController,
+            containerOrderStore: orderStore,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final dragStart = tester.getCenter(
+      find.byKey(const ValueKey('container-drag-8')),
+    );
+    final dropTarget = tester.getCenter(
+      find.byKey(const ValueKey('container-drop-11')),
+    );
+    await tester.dragFrom(dragStart, dropTarget - dragStart);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Container 11')).dx,
+      lessThan(tester.getTopLeft(find.text('Container 8')).dx),
+    );
+    expect(
+      find.textContaining(
+        'Container-Reihenfolge konnte nicht gespeichert werden',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    taskController.dispose();
+    userController.dispose();
   });
 
   test('TaskController reloads the task list (incl. the new task) after createTask', () async {

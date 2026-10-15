@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../application/task_controller.dart';
 import '../data/container_model.dart' as container_model;
+import '../data/container_order_store.dart';
 import '../data/task_model.dart';
 import 'task_dialog.dart';
 import 'task_item_widget.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
+import '../../user/application/user_controller.dart';
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({super.key, this.controller, this.projectId});
+  const TaskListScreen({
+    super.key,
+    this.controller,
+    this.projectId,
+    this.userController,
+    this.containerOrderStore,
+  });
 
   /// Optionaler von außen injizierter Controller (z.B. von HomeScreen,
   /// damit ein Pull-to-Refresh von außen dieselben Daten neu laden kann).
@@ -17,6 +25,8 @@ class TaskListScreen extends StatefulWidget {
   /// (z.B. bei eigenständiger Nutzung/Tests).
   final TaskController? controller;
   final int? projectId;
+  final UserController? userController;
+  final ContainerOrderStoreContract? containerOrderStore;
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
@@ -24,24 +34,165 @@ class TaskListScreen extends StatefulWidget {
 
 class _TaskListScreenState extends State<TaskListScreen> {
   late final TaskController _controller = widget.controller ?? TaskController();
+  late final UserController _userController =
+      widget.userController ?? UserController();
+  late final ContainerOrderStoreContract _containerOrderStore =
+      widget.containerOrderStore ??
+      const SharedPreferencesContainerOrderStore();
+  final ScrollController _horizontalContainersScrollController =
+      ScrollController();
   // Container-IDs halten den Klappzustand auch über Widget-Rebuilds hinweg fest.
   final Set<int> _collapsedContainerIds = {};
+  List<int> _containerOrder = const [];
+  int? _orderUserId;
+  int? _orderProjectId;
+  int _orderLoadVersion = 0;
+  int _orderSaveVersion = 0;
+  bool _orderReady = false;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_handleControllerUpdate);
+    _userController.addListener(_handleUserUpdate);
     // Nur selbst initial laden, wenn wir den Controller selbst besitzen.
     // Ein von außen injizierter Controller wurde vom Owner (z.B. HomeScreen)
     // bereits geladen bzw. wird von diesem verwaltet.
     if (widget.controller == null) {
       _refreshTasks();
     }
+    if (widget.userController == null) {
+      _loadCurrentUser();
+    } else {
+      _handleUserUpdate();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId) {
+      _loadContainerOrder();
+    }
   }
 
   void _handleControllerUpdate() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _handleUserUpdate() {
+    _loadContainerOrder();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final loaded = await _userController.loadCurrentUser();
+    if (!mounted) return;
+    if (!loaded && _userController.errorMessage != null) {
+      _showOrderError(
+        'Benutzer konnte nicht geladen werden: ${_userController.errorMessage!}',
+      );
+    }
+  }
+
+  void _loadContainerOrder() {
+    final userId = _userController.currentUser?.id;
+    final projectId = widget.projectId;
+    if (userId == _orderUserId && projectId == _orderProjectId && _orderReady) {
+      return;
+    }
+
+    _orderUserId = userId;
+    _orderProjectId = projectId;
+    final version = ++_orderLoadVersion;
+    if (userId == null) {
+      setState(() {
+        _orderReady = false;
+        _containerOrder = const [];
+      });
+      return;
+    }
+
+    setState(() {
+      _orderReady = false;
+      _containerOrder = const [];
+    });
+    _containerOrderStore
+        .loadOrder(userId: userId, projectId: projectId)
+        .then((order) {
+          if (!mounted || version != _orderLoadVersion) return;
+          setState(() {
+            _containerOrder = order;
+            _orderReady = true;
+          });
+        })
+        .catchError((Object error) {
+          if (!mounted || version != _orderLoadVersion) return;
+          setState(() {
+            _containerOrder = const [];
+            _orderReady = true;
+          });
+          _showOrderError(
+            'Container-Reihenfolge konnte nicht geladen werden: $error',
+          );
+        });
+  }
+
+  List<int> _orderedContainerIds(Iterable<int> ids) {
+    // Ignore removed/hidden IDs and append newly created containers stably.
+    final remaining = ids.toSet();
+    final ordered = <int>[];
+    for (final id in _containerOrder) {
+      if (remaining.remove(id)) ordered.add(id);
+    }
+    final newIds = remaining.toList()..sort();
+    return [...ordered, ...newIds];
+  }
+
+  Future<void> _moveContainer(
+    int draggedId,
+    int targetId,
+    List<int> containerIds,
+  ) async {
+    final userId = _userController.currentUser?.id;
+    if (!_orderReady || userId == null || draggedId == targetId) return;
+
+    final previousOrder = _orderedContainerIds(containerIds);
+    final updatedOrder = List<int>.from(previousOrder);
+    updatedOrder.remove(draggedId);
+    updatedOrder.insert(updatedOrder.indexOf(targetId), draggedId);
+
+    // Show the new order immediately; a failed write restores the snapshot.
+    setState(() {
+      _containerOrder = updatedOrder;
+    });
+    final loadVersion = _orderLoadVersion;
+    final saveVersion = ++_orderSaveVersion;
+    try {
+      await _containerOrderStore.saveOrder(
+        userId: userId,
+        projectId: widget.projectId,
+        containerIds: updatedOrder,
+      );
+    } catch (error) {
+      if (!mounted ||
+          loadVersion != _orderLoadVersion ||
+          saveVersion != _orderSaveVersion) {
+        return;
+      }
+      setState(() {
+        _containerOrder = previousOrder;
+      });
+      _showOrderError(
+        'Container-Reihenfolge konnte nicht gespeichert werden: $error',
+      );
+    }
+  }
+
+  void _showOrderError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _refreshTasks() {
@@ -51,12 +202,17 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   void dispose() {
     _controller.removeListener(_handleControllerUpdate);
+    _userController.removeListener(_handleUserUpdate);
     // Nur aufräumen, wenn dieser Screen den Controller selbst erzeugt hat.
     // Ein von außen injizierter Controller gehört dem Owner (HomeScreen) und
     // darf hier nicht disposed werden, sonst crasht der Owner beim nächsten Zugriff.
     if (widget.controller == null) {
       _controller.dispose();
     }
+    if (widget.userController == null) {
+      _userController.dispose();
+    }
+    _horizontalContainersScrollController.dispose();
     super.dispose();
   }
 
@@ -301,9 +457,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
       containerTitles.putIfAbsent(container.id, () => container.title);
     }
 
-    final containerIds = grouped.keys.toList()..sort();
+    final containerIds = _orderedContainerIds(grouped.keys);
+    final canReorderContainers =
+        _orderReady && _userController.currentUser != null;
 
-    Widget buildContainer(int containerId, {required bool compact}) {
+    Widget buildContainer(
+      int containerId, {
+      required bool compact,
+      bool showDragHandle = false,
+    }) {
       return SizedBox(
         width: compact ? double.infinity : 320,
         child: GlassContainer(
@@ -313,6 +475,41 @@ class _TaskListScreenState extends State<TaskListScreen> {
             children: [
               Row(
                 children: [
+                  if (showDragHandle)
+                    Tooltip(
+                      message: 'Container verschieben',
+                      child: Draggable<int>(
+                        key: ValueKey('container-drag-$containerId'),
+                        data: containerId,
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: SizedBox(
+                            width: compact
+                                ? (MediaQuery.sizeOf(context).width - 48).clamp(
+                                    240.0,
+                                    320.0,
+                                  )
+                                : 320,
+                            child: Opacity(
+                              opacity: 0.9,
+                              child: buildContainer(
+                                containerId,
+                                compact: compact,
+                              ),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Icon(
+                          Icons.drag_indicator,
+                          color: Theme.of(context).colorScheme.primary
+                              .withValues(alpha: 0.35),
+                        ),
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Text(
                       containerTitles[containerId] ?? '',
@@ -419,6 +616,66 @@ class _TaskListScreenState extends State<TaskListScreen> {
       );
     }
 
+    Widget buildSortableContainer(int containerId, {required bool compact}) {
+      final child = buildContainer(
+        containerId,
+        compact: compact,
+        showDragHandle: canReorderContainers,
+      );
+      if (!canReorderContainers) return child;
+
+      return DragTarget<int>(
+        key: ValueKey('container-drop-$containerId'),
+        onWillAcceptWithDetails: (details) => details.data != containerId,
+        onAcceptWithDetails: (details) =>
+            _moveContainer(details.data, containerId, containerIds),
+        builder: (context, candidates, rejected) => Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: candidates.isEmpty
+                  ? null
+                  : BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+              child: child,
+            ),
+            if (candidates.isNotEmpty)
+              Positioned(
+                key: ValueKey('container-drop-indicator-$containerId'),
+                left: compact ? 0 : -AppSpacing.xs,
+                right: compact ? 0 : null,
+                top: compact ? -AppSpacing.xs : 0,
+                bottom: compact ? null : 0,
+                child: IgnorePointer(
+                  child: Container(
+                    width: compact ? null : 4,
+                    height: compact ? 4 : null,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).colorScheme.primary
+                              .withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     Widget buildAddContainerButton({required bool compact}) {
       return SizedBox(
         width: compact ? double.infinity : 220,
@@ -452,7 +709,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final containerId in containerIds) ...[
-                  buildContainer(containerId, compact: true),
+                  buildSortableContainer(containerId, compact: true),
                   const SizedBox(height: AppSpacing.md),
                 ],
                 buildAddContainerButton(compact: true),
@@ -461,17 +718,30 @@ class _TaskListScreenState extends State<TaskListScreen> {
           );
         }
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final containerId in containerIds) ...[
-                buildContainer(containerId, compact: false),
-                const SizedBox(width: AppSpacing.md),
-              ],
-              buildAddContainerButton(compact: false),
-            ],
+        // A top-positioned scrollbar keeps horizontal navigation visible
+        // above the complete row of containers.
+        return Scrollbar(
+          key: const ValueKey('container-overview-scrollbar'),
+          controller: _horizontalContainersScrollController,
+          thumbVisibility: true,
+          scrollbarOrientation: ScrollbarOrientation.top,
+          child: SingleChildScrollView(
+            controller: _horizontalContainersScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Padding(
+              key: const ValueKey('container-overview-items-spacing'),
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final containerId in containerIds) ...[
+                    buildSortableContainer(containerId, compact: false),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
+                  buildAddContainerButton(compact: false),
+                ],
+              ),
+            ),
           ),
         );
       },

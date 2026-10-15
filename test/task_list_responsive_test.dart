@@ -72,4 +72,46 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('wide container overview has a scrollbar above the containers', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = _PopulatedTaskController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: TaskListScreen(controller: controller),
+          ),
+        ),
+      ),
+    );
+
+    final scrollbar = tester.widget<Scrollbar>(
+      find.byKey(const ValueKey('container-overview-scrollbar')),
+    );
+    expect(scrollbar.scrollbarOrientation, ScrollbarOrientation.top);
+    final spacing = tester.widget<Padding>(
+      find.byKey(const ValueKey('container-overview-items-spacing')),
+    );
+    expect(spacing.padding, const EdgeInsets.only(top: 16));
+    expect(
+      find.byType(Scrollable).evaluate().any((element) {
+        final scrollable = element.widget as Scrollable;
+        final scrollController = scrollable.controller;
+        return scrollable.axisDirection == AxisDirection.right &&
+            scrollController != null &&
+            scrollController.position.maxScrollExtent > 0;
+      }),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
