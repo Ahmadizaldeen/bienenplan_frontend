@@ -178,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 key: _homeContentKey,
                 taskController: _taskController,
                 projectController: _projectController,
+                userController: _userController,
                 changePoller: _changePoller,
                 onRefresh: _refreshAll,
                 leading: isNarrowPhone ? sidebar : null,
@@ -241,6 +242,7 @@ class _HomeContent extends StatelessWidget {
     super.key,
     required this.taskController,
     required this.projectController,
+    required this.userController,
     required this.changePoller,
     required this.onRefresh,
     this.leading,
@@ -248,6 +250,7 @@ class _HomeContent extends StatelessWidget {
 
   final TaskController taskController;
   final ProjectController projectController;
+  final UserController userController;
   final ChangePoller changePoller;
   final Future<void> Function() onRefresh;
   final Widget? leading;
@@ -275,6 +278,7 @@ class _HomeContent extends StatelessWidget {
                 return TaskListScreen(
                   controller: taskController,
                   projectId: projectController.selectedProject?.id,
+                  userController: userController,
                 );
               },
             ),
