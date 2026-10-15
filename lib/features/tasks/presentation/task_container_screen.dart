@@ -336,7 +336,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         title: const Text('Container löschen?'),
         content: Text(
           '„$title“ wird gelöscht. Das ist nur möglich, wenn der Container '
-          'keine aktiven Aufgaben enthält.',
+          'keine unerledigten Aufgaben enthält.',
         ),
         actions: [
           TextButton(
