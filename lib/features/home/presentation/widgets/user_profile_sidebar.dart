@@ -1,107 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/routing/app_router.dart';
 import '../../../projects/application/project_controller.dart';
-import '../../../projects/presentation/project_list_widget.dart';
 import '../../../projects/presentation/project_archive_screen.dart';
-import '../../../settings/presentation/app_settings_dialog.dart';
 import '../../../user/application/user_controller.dart';
 import '../../../user/presentation/profile_avatar.dart';
+import '../../../user/presentation/profile_picture_dialog.dart';
 
 class UserProfileSidebar extends StatelessWidget {
   const UserProfileSidebar({
     super.key,
     required this.onLogout,
-    required this.isExpanded,
-    required this.onToggle,
     this.projectController,
     this.userController,
   });
 
   final VoidCallback onLogout;
-  final bool isExpanded;
-  final VoidCallback onToggle;
-
-  /// Optional von außen injizierter Controller, damit z.B. HomeScreen
-  /// per Pull-to-Refresh dieselbe Projektliste neu laden kann.
   final ProjectController? projectController;
-
-  /// Optional von außen injizierter Controller, damit der angezeigte
-  /// Nutzername mit HomeScreen synchron bleibt.
   final UserController? userController;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      alignment: Alignment.topCenter,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Die kompakte Kopfzeile bleibt mit Nutzer und Projekt synchron,
-          // auch wenn die darunterliegenden Details eingeklappt sind.
-          AnimatedBuilder(
-            animation: Listenable.merge([userController, projectController]),
-            builder: (context, _) {
-              final userName = userController?.currentUser?.name ?? 'Benutzer';
-              final projectName =
-                  projectController?.selectedProject?.name ??
-                  (projectController?.isLoading == true
-                      ? 'Projekte werden geladen'
-                      : 'Kein Projekt');
-              final toggleLabel = isExpanded
-                  ? 'Profil und Projekte zuklappen'
-                  : 'Profil und Projekte aufklappen';
-
-              return Semantics(
-                expanded: isExpanded,
-                child: Tooltip(
-                  message: '$toggleLabel: $userName > $projectName',
-                  child: TextButton.icon(
-                    key: const ValueKey('profile-project-toggle'),
-                    onPressed: onToggle,
-                    style: TextButton.styleFrom(
-                      foregroundColor: scheme.onSurface,
-                      backgroundColor: scheme.surfaceContainer,
-                      minimumSize: const Size(0, 48),
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                    ),
-                    icon: Icon(isExpanded ? Icons.close : Icons.menu),
-                    label: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            userName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4),
-                          child: Icon(Icons.chevron_right, size: 18),
-                        ),
-                        Flexible(
-                          child: Text(
-                            projectName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          if (isExpanded) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _buildDetails(context),
-          ],
-        ],
-      ),
-    );
+    return _buildDetails(context);
   }
 
   Widget _buildDetails(BuildContext context) {
@@ -203,7 +124,7 @@ class UserProfileSidebar extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Profil',
+                'Einstellungen',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -212,44 +133,49 @@ class UserProfileSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              InkWell(
-                onTap: () => AppSettingsDialog.show(
-                  context,
-                  userController: userController,
-                ),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: scheme.outlineVariant, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.work_outline, color: scheme.primary),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Einstellungen',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Profil, Benachrichtigungen & mehr',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
+              _SettingsTile(
+                icon: Icons.person_outline,
+                title: 'Profil',
+                subtitle: 'Profilbild und Kontodaten verwalten',
+                onTap: userController == null
+                    ? null
+                    : () => showProfilePictureDialog(
+                        context,
+                        controller: userController!,
                       ),
-                      Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                    ],
-                  ),
-                ),
+              ),
+              const _SettingsTile(
+                icon: Icons.notifications_none,
+                title: 'Benachrichtigungen',
+                subtitle: 'Erinnerungen und Hinweise',
+              ),
+              const _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: 'Darstellung',
+                subtitle: 'Theme und Oberfläche',
+              ),
+              const _SettingsTile(
+                icon: Icons.security_outlined,
+                title: 'Sicherheit',
+                subtitle: 'Passwort und Zugriff',
+              ),
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Datenschutzerklärung',
+                subtitle: 'Informationen zur Verarbeitung deiner Daten',
+                onTap: () {
+                  Scaffold.maybeOf(context)?.closeDrawer();
+                  Navigator.of(context).pushNamed(AppRouter.privacy);
+                },
+              ),
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: 'Impressum',
+                subtitle: 'Betreiber- und Kontaktangaben',
+                onTap: () {
+                  Scaffold.maybeOf(context)?.closeDrawer();
+                  Navigator.of(context).pushNamed(AppRouter.imprint);
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
               if (userController != null && projectController != null)
@@ -286,28 +212,64 @@ class UserProfileSidebar extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: boardDecoration,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Projekte',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              ProjectListWidget(controller: projectController),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: ValueKey('profile-setting-${title.toLowerCase()}'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: scheme.outlineVariant, width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: scheme.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+          ],
+        ),
+      ),
     );
   }
 }
