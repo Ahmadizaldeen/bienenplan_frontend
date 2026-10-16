@@ -117,9 +117,13 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(home: HomeScreen(onLogout: () {})));
 
-    expect(find.text('User Profile'), findsOneWidget);
-    expect(find.text('Projektübersicht'), findsOneWidget);
-    expect(find.byType(TextField), findsWidgets);
+    expect(find.byKey(const ValueKey('home-profile-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-top-bar')), findsOneWidget);
+    expect(find.text('Projektübersicht'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('user-profile-search-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('TaskListScreen shows button to create new container', (
