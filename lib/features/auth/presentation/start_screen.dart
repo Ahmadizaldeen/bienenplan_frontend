@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/api/api_client.dart';
-import '../../../core/api/api_endpoints.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
+import '../application/api_status_controller.dart';
 
 class StartScreen extends StatefulWidget {
-  StartScreen({super.key, ApiClient? apiClient})
-    : apiClient = apiClient ?? ApiClient();
+  const StartScreen({super.key, this.apiClient, this.apiStatusController});
 
-  final ApiClient apiClient;
+  final ApiClient? apiClient;
+  final ApiStatusController? apiStatusController;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
 class _StartScreenState extends State<StartScreen> {
+  late final ApiStatusController _apiStatusController =
+      widget.apiStatusController ??
+      ApiStatusController(apiClient: widget.apiClient);
+
   // Während der Anfrage wird der Info-Button deaktiviert und ein Spinner gezeigt.
   bool _isCheckingApi = false;
 
@@ -27,16 +31,14 @@ class _StartScreenState extends State<StartScreen> {
     setState(() => _isCheckingApi = true);
 
     try {
-      // baseUrl endet in diesem Projekt auf /api.
-      // await wartet auf die Serverantwort, ohne die UI zu blockieren.
-      final response = await widget.apiClient.get(ApiEndpoints.baseUrl);
+      final response = await _apiStatusController.checkApi();
 
       // Der Screen könnte während der Anfrage geschlossen worden sein.
       // Dann darf hier nicht mehr auf seinen BuildContext zugegriffen werden.
       if (!mounted) return;
       _showStatusDialog(
         title: 'API erreichbar',
-        message: response?.toString() ?? 'Die API antwortet erfolgreich.',
+        message: response ?? 'Die API antwortet erfolgreich.',
         isError: false,
       );
     } catch (error) {

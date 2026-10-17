@@ -4,12 +4,25 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import 'task_attachment.dart';
 
-class TaskAttachmentRepository {
+abstract class TaskAttachmentRepositoryContract {
+  Future<List<TaskAttachment>> list(int taskId);
+
+  Future<List<TaskAttachment>> upload(
+    int taskId,
+    List<({String name, Uint8List bytes})> files,
+  );
+
+  Future<Uint8List> download(int taskId, int attachmentId);
+  Future<void> delete(int taskId, int attachmentId);
+}
+
+class TaskAttachmentRepository implements TaskAttachmentRepositoryContract {
   TaskAttachmentRepository({ApiClient? apiClient})
     : _apiClient = apiClient ?? ApiClient();
 
   final ApiClient _apiClient;
 
+  @override
   Future<List<TaskAttachment>> list(int taskId) async {
     final result = await _apiClient.get(ApiEndpoints.taskAttachments(taskId));
     if (result is! List) throw FormatException('Ungültige Anhangsliste.');
@@ -18,6 +31,7 @@ class TaskAttachmentRepository {
         .toList();
   }
 
+  @override
   Future<List<TaskAttachment>> upload(
     int taskId,
     List<({String name, Uint8List bytes})> files,
@@ -34,9 +48,11 @@ class TaskAttachmentRepository {
         .toList();
   }
 
-  Future<Uint8List> download(int taskId, int attachmentId) =>
-      _apiClient.getBytes(ApiEndpoints.taskAttachmentDownload(taskId, attachmentId));
+  @override
+  Future<Uint8List> download(int taskId, int attachmentId) => _apiClient
+      .getBytes(ApiEndpoints.taskAttachmentDownload(taskId, attachmentId));
 
+  @override
   Future<void> delete(int taskId, int attachmentId) async {
     await _apiClient.delete(ApiEndpoints.taskAttachment(taskId, attachmentId));
   }

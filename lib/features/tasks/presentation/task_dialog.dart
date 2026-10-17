@@ -11,7 +11,6 @@ import '../data/task_model.dart';
 import '../data/task_attachment.dart';
 import '../../../core/files/file_validation_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../subtasks/data/subtask_repository.dart';
 import '../../subtasks/presentation/widgets/subtask_section.dart';
 
 /// Zeigt dieselbe Aufgabenmaske zum Erstellen und Bearbeiten.
@@ -22,7 +21,6 @@ Future<bool> showTaskDialog(
   required int containerId,
   int? projectId,
   Task? task,
-  SubtaskRepositoryContract? subtaskRepository,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -31,7 +29,6 @@ Future<bool> showTaskDialog(
       containerId: containerId,
       projectId: projectId ?? task?.projectId,
       task: task,
-      subtaskRepository: subtaskRepository ?? SubtaskRepository(),
     ),
   );
   return result ?? false;
@@ -43,14 +40,12 @@ class _TaskDialog extends StatefulWidget {
     required this.containerId,
     this.projectId,
     this.task,
-    required this.subtaskRepository,
   });
 
   final TaskController controller;
   final int containerId;
   final int? projectId;
   final Task? task;
-  final SubtaskRepositoryContract subtaskRepository;
 
   @override
   State<_TaskDialog> createState() => _TaskDialogState();
@@ -464,7 +459,7 @@ class _TaskDialogState extends State<_TaskDialog> {
   Future<bool> _saveDraftSubtasks(int taskId) async {
     while (_draftSubtasks.isNotEmpty) {
       try {
-        await widget.subtaskRepository.create(taskId, _draftSubtasks.first);
+        await widget.controller.createSubtask(taskId, _draftSubtasks.first);
       } catch (error) {
         if (!mounted) return false;
         setState(() {
@@ -486,7 +481,7 @@ class _TaskDialogState extends State<_TaskDialog> {
     var incompleteCount = _draftSubtasks.length;
     if (taskId != null) {
       try {
-        final subtasks = await widget.subtaskRepository.list(taskId);
+        final subtasks = await widget.controller.fetchSubtasks(taskId);
         if (!mounted) return false;
         incompleteCount += subtasks.items
             .where((item) => !item.completed)
@@ -1308,7 +1303,7 @@ class _TaskDialogState extends State<_TaskDialog> {
       ),
       child: SubtaskSection(
         taskId: _taskId,
-        repository: widget.subtaskRepository,
+        repository: widget.controller.subtaskRepository,
         disabled: _isSaving || _isDeleting || _isUploading,
         draftSubtasks: _draftSubtasks,
         onDraftSubtasksChanged: (subtasks) {

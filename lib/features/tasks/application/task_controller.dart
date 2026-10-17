@@ -8,23 +8,36 @@ import '../data/task_attachment.dart';
 import '../data/task_attachment_repository.dart';
 import '../data/group_model.dart';
 import '../data/group_repository.dart';
+import '../../subtasks/data/subtask_model.dart';
+import '../../subtasks/data/subtask_repository.dart';
 
 class TaskController extends ChangeNotifier {
   TaskController({
     TaskRepositoryContract? taskRepository,
     ContainerRepositoryContract? containerRepository,
     GroupRepositoryContract? groupRepository,
-    TaskAttachmentRepository? attachmentRepository,
+    TaskAttachmentRepositoryContract? attachmentRepository,
+    SubtaskRepositoryContract? subtaskRepository,
   }) : _taskRepository = taskRepository ?? TaskRepository(),
        _containerRepository = containerRepository ?? ContainerRepository(),
        _groupRepository = groupRepository ?? GroupRepository(),
        _attachmentRepository =
-           attachmentRepository ?? TaskAttachmentRepository();
+           attachmentRepository ?? TaskAttachmentRepository(),
+       _subtaskRepository = subtaskRepository ?? SubtaskRepository();
 
   final TaskRepositoryContract _taskRepository;
   final ContainerRepositoryContract _containerRepository;
   final GroupRepositoryContract _groupRepository;
-  final TaskAttachmentRepository _attachmentRepository;
+  final TaskAttachmentRepositoryContract _attachmentRepository;
+  final SubtaskRepositoryContract _subtaskRepository;
+
+  SubtaskRepositoryContract get subtaskRepository => _subtaskRepository;
+
+  Future<Subtask> createSubtask(int taskId, String title) =>
+      _subtaskRepository.create(taskId, title);
+
+  Future<SubtaskList> fetchSubtasks(int taskId) =>
+      _subtaskRepository.list(taskId);
 
   Future<List<TaskAttachment>> listAttachments(int taskId) =>
       _attachmentRepository.list(taskId);

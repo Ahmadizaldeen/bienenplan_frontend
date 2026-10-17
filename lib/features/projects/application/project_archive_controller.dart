@@ -9,18 +9,18 @@ import '../data/project_model.dart';
 
 class ProjectArchiveController extends ChangeNotifier {
   ProjectArchiveController({
-    ProjectArchiveRepository? repository,
+    ProjectArchiveRepositoryContract? repository,
     SubtaskRepositoryContract? subtaskRepository,
-    TaskAttachmentRepository? attachmentRepository,
+    TaskAttachmentRepositoryContract? attachmentRepository,
     this._refreshActiveProjects,
   }) : _repository = repository ?? ProjectArchiveRepository(),
        _subtaskRepository = subtaskRepository ?? SubtaskRepository(),
        _attachmentRepository =
            attachmentRepository ?? TaskAttachmentRepository();
 
-  final ProjectArchiveRepository _repository;
+  final ProjectArchiveRepositoryContract _repository;
   final SubtaskRepositoryContract _subtaskRepository;
-  final TaskAttachmentRepository _attachmentRepository;
+  final TaskAttachmentRepositoryContract _attachmentRepository;
   final Future<String?> Function()? _refreshActiveProjects;
   List<Project> projects = const [];
   bool isLoading = false;

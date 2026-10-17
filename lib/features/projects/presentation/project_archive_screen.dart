@@ -15,18 +15,18 @@ class ProjectArchiveScreen extends StatefulWidget {
   ProjectArchiveScreen({
     super.key,
     required this.projectController,
-    ProjectArchiveRepository? repository,
+    ProjectArchiveRepositoryContract? repository,
     SubtaskRepositoryContract? subtaskRepository,
-    TaskAttachmentRepository? attachmentRepository,
+    TaskAttachmentRepositoryContract? attachmentRepository,
   }) : repository = repository ?? ProjectArchiveRepository(),
        subtaskRepository = subtaskRepository ?? SubtaskRepository(),
        attachmentRepository =
            attachmentRepository ?? TaskAttachmentRepository();
 
   final ProjectController projectController;
-  final ProjectArchiveRepository repository;
+  final ProjectArchiveRepositoryContract repository;
   final SubtaskRepositoryContract subtaskRepository;
-  final TaskAttachmentRepository attachmentRepository;
+  final TaskAttachmentRepositoryContract attachmentRepository;
 
   @override
   State<ProjectArchiveScreen> createState() => _ProjectArchiveScreenState();
