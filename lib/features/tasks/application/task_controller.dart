@@ -33,11 +33,16 @@ class TaskController extends ChangeNotifier {
 
   SubtaskRepositoryContract get subtaskRepository => _subtaskRepository;
 
-  Future<Subtask> createSubtask(int taskId, String title) =>
-      _subtaskRepository.create(taskId, title);
+  Future<Subtask> createSubtask(
+    int taskId,
+    String title, {
+    SubtaskRepositoryContract? repository,
+  }) => (repository ?? _subtaskRepository).create(taskId, title);
 
-  Future<SubtaskList> fetchSubtasks(int taskId) =>
-      _subtaskRepository.list(taskId);
+  Future<SubtaskList> fetchSubtasks(
+    int taskId, {
+    SubtaskRepositoryContract? repository,
+  }) => (repository ?? _subtaskRepository).list(taskId);
 
   Future<List<TaskAttachment>> listAttachments(int taskId) =>
       _attachmentRepository.list(taskId);

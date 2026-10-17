@@ -12,21 +12,18 @@ import '../data/project_archive_repository.dart';
 import '../data/project_model.dart';
 
 class ProjectArchiveScreen extends StatefulWidget {
-  ProjectArchiveScreen({
+  const ProjectArchiveScreen({
     super.key,
     required this.projectController,
-    ProjectArchiveRepositoryContract? repository,
-    SubtaskRepositoryContract? subtaskRepository,
-    TaskAttachmentRepositoryContract? attachmentRepository,
-  }) : repository = repository ?? ProjectArchiveRepository(),
-       subtaskRepository = subtaskRepository ?? SubtaskRepository(),
-       attachmentRepository =
-           attachmentRepository ?? TaskAttachmentRepository();
+    this.repository,
+    this.subtaskRepository,
+    this.attachmentRepository,
+  });
 
   final ProjectController projectController;
-  final ProjectArchiveRepositoryContract repository;
-  final SubtaskRepositoryContract subtaskRepository;
-  final TaskAttachmentRepositoryContract attachmentRepository;
+  final ProjectArchiveRepositoryContract? repository;
+  final SubtaskRepositoryContract? subtaskRepository;
+  final TaskAttachmentRepositoryContract? attachmentRepository;
 
   @override
   State<ProjectArchiveScreen> createState() => _ProjectArchiveScreenState();
