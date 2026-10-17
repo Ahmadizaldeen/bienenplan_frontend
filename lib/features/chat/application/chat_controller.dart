@@ -7,11 +7,10 @@ import '../data/chat_message.dart';
 import '../data/chat_repository.dart';
 
 class ChatController extends ChangeNotifier {
-  ChatController({required this.projectId, ChatRepositoryContract? repository})
+  ChatController({ChatRepositoryContract? repository})
     : _repository = repository ?? ChatRepository();
 
   // Der Verlauf bleibt nur erhalten, solange der Chat-Bildschirm geöffnet ist.
-  final int projectId;
   final ChatRepositoryContract _repository;
   List<ChatMessage> _messages = const [];
   bool _isSending = false;
@@ -54,7 +53,7 @@ class ChatController extends ChangeNotifier {
     _errorMessage = null;
     _notify();
     try {
-      final answer = await _repository.sendMessage(projectId, _messages);
+      final answer = await _repository.sendMessage(_messages);
       if (_disposed) return false;
       _messages = [..._messages, answer];
       return true;

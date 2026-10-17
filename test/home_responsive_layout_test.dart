@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bienenplan_frontend/core/theme/app_theme.dart';
 import 'package:bienenplan_frontend/features/home/presentation/home_screen.dart';
+import 'package:bienenplan_frontend/features/chat/presentation/chat_screen.dart';
+import 'package:bienenplan_frontend/features/home/presentation/widgets/home_top_bar.dart';
 import 'package:bienenplan_frontend/features/home/presentation/widgets/user_profile_sidebar.dart';
 import 'package:bienenplan_frontend/features/projects/application/project_controller.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_local_store.dart';
@@ -21,6 +23,49 @@ import 'package:bienenplan_frontend/features/user/data/user_model.dart';
 import 'package:bienenplan_frontend/features/user/data/user_repository.dart';
 
 void main() {
+  testWidgets(
+    'profile chat opens from the toolbar without a selected project',
+    (tester) async {
+      final projectController = ProjectController(
+        projectRepository: _FakeProjectRepository(),
+        projectLocalStore: _FakeProjectLocalStore(),
+      );
+      final userController = UserController(
+        userRepository: _FakeUserRepository(),
+      );
+      addTearDown(projectController.dispose);
+      addTearDown(userController.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => HomeTopBar(
+                userController: userController,
+                projectController: projectController,
+                onRefresh: () async {},
+                onLogout: () {},
+                onOpenProfile: () {},
+                onOpenProjects: () {},
+                onOpenAssistant: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(projectController.selectedProject, isNull);
+      final button = find.byKey(const ValueKey('user-profile-assistant'));
+      expect(tester.widget<IconButton>(button).onPressed, isNotNull);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.text('Alle aktiven Projekte'), findsOneWidget);
+    },
+  );
+
   for (final theme in [AppTheme.light, AppTheme.dark]) {
     for (final width in [320.0, 390.0, 600.0, 800.0, 1280.0]) {
       testWidgets(

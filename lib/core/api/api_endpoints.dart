@@ -22,6 +22,7 @@ class ApiEndpoints {
 
   // Benutzer-Routen (außer Login und Registrierung authentifizierungspflichtig).
   static String get me => "$baseUrl/me";
+  static String get chat => "$me/chat";
   static String get users => "$baseUrl/users";
   static String get uploadProfilePicture => "$baseUrl/me/picture";
 
@@ -56,7 +57,6 @@ class ApiEndpoints {
   static String get archivedProjects => "$projects/archived";
   static String restoreProject(int id) => "$projects/$id/restore";
   static String projectDetail(int id) => "$projects/$id";
-  static String projectChat(int id) => "${projectDetail(id)}/chat";
   static String projectGroups(int projectId) => "$projects/$projectId/groups";
   static String projectGroup(int projectId, int groupId) =>
       "${projectGroups(projectId)}/$groupId";

@@ -13,6 +13,12 @@ Frontend-Repository: <https://github.com/Ahmadizaldeen/bienenplan_frontend>
 - Automatischer Login beim App-Start, Abmelden und Löschen der lokalen Sitzung
 - Prüfung der Backend-Erreichbarkeit direkt vom Startscreen
 - Home-Ansicht mit Sidebar, Projektübersicht und zentralem Pull-to-Refresh
+- Profilbezogener BienenPlan-Assistent in der Home-Topbar, auch ohne
+  Projektauswahl: `POST /api/me/chat` berücksichtigt alle zugänglichen aktiven
+  Projekte mit den persönlich sichtbaren Aufgaben und Unteraufgaben.
+  Archivierte Projekte bleiben ausgeschlossen. Statistiken gelten nur für
+  diese sichtbaren Daten; der Verlauf bleibt nur während des geöffneten Chats
+  erhalten. Zu große Kontexte werden als Fehler angezeigt, nicht gekürzt.
 - Automatische Aktualisierung über den Änderungs-Feed des Backends:
   Polling alle 5 Sekunden, stilles Neuladen bei Änderungen und sichtbare
   Fehlerhinweise mit Wiederholungsmöglichkeit

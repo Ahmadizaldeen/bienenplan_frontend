@@ -8,7 +8,7 @@ import '../../../core/api/api_exception.dart';
 import 'chat_message.dart';
 
 abstract class ChatRepositoryContract {
-  Future<ChatMessage> sendMessage(int projectId, List<ChatMessage> messages);
+  Future<ChatMessage> sendMessage(List<ChatMessage> messages);
 }
 
 class ChatRepository implements ChatRepositoryContract {
@@ -18,18 +18,13 @@ class ChatRepository implements ChatRepositoryContract {
   final ApiClient _apiClient;
 
   @override
-  Future<ChatMessage> sendMessage(
-    int projectId,
-    List<ChatMessage> messages,
-  ) async {
+  Future<ChatMessage> sendMessage(List<ChatMessage> messages) async {
     try {
       // Das Backend wartet bis zu 180 Sekunden auf Ollama; der kleine Puffer
       // verhindert, dass der Client vor dem Backend abbricht.
-      final response = await _apiClient.post(
-        ApiEndpoints.projectChat(projectId),
-        {'messages': messages.map((message) => message.toJson()).toList()},
-        timeout: const Duration(seconds: 190),
-      );
+      final response = await _apiClient.post(ApiEndpoints.chat, {
+        'messages': messages.map((message) => message.toJson()).toList(),
+      }, timeout: const Duration(seconds: 190));
       if (response is Map<String, dynamic> &&
           response['message'] is Map<String, dynamic>) {
         final message = response['message'] as Map<String, dynamic>;

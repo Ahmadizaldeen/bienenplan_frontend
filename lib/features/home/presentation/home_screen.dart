@@ -40,10 +40,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final _scaffoldKey =
-      GlobalKey<
-        ScaffoldState
-      >(); // 
+  final _scaffoldKey = GlobalKey<ScaffoldState>(); //
   late int _groupsRevision;
 
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
@@ -234,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onOpenProfile: () => _scaffoldKey.currentState?.openDrawer(),
                   onOpenProjects: () =>
                       _scaffoldKey.currentState?.openEndDrawer(),
-                  onOpenAssistant: _openProjectChat,
+                  onOpenAssistant: _openProfileChat,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Expanded(
@@ -254,14 +251,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _openProjectChat() {
-    // Das ausgewählte Projekt für diesen Chat übernehmen; ohne Auswahl ist die
-    // Chat-Aktion in der Topbar deaktiviert.
-    final project = _projectController.selectedProject;
-    if (project == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ChatScreen(project: project)),
-    );
+  void _openProfileChat() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const ChatScreen()));
   }
 }
 
