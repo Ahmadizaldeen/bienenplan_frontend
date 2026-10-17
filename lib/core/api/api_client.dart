@@ -43,18 +43,24 @@ class ApiClient {
   }
 
   // Generic POST Request
-  Future<dynamic> post(String url, Map<String, dynamic> body) async {
+  Future<dynamic> post(
+    String url,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     final token = await getToken();
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        ..._ngrokHeaders,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
+    final response = await http
+        .post(
+          Uri.parse(url),
+          headers: {
+            ..._ngrokHeaders,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(timeout);
 
     return _handleResponse(response);
   }

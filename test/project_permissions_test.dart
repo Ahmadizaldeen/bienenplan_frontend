@@ -169,7 +169,11 @@ class _Api extends ApiClient {
   }
 
   @override
-  Future<dynamic> post(String url, Map<String, dynamic> body) async {
+  Future<dynamic> post(
+    String url,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     urls.add(url);
     expect(body, isEmpty);
     return {'message': 'Wiederhergestellt'};

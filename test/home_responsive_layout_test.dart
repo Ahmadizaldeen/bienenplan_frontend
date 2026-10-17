@@ -76,6 +76,10 @@ void main() {
             findsOneWidget,
           );
           expect(
+            find.byKey(const ValueKey('user-profile-assistant')),
+            findsOneWidget,
+          );
+          expect(
             find.byKey(const ValueKey('home-current-project')),
             findsOneWidget,
           );

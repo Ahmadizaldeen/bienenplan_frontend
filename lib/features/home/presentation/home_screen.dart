@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
 import '../../projects/presentation/project_list_widget.dart';
+import '../../chat/presentation/chat_screen.dart';
 import '../../sync/application/change_poller.dart';
 import '../../sync/data/change_repository.dart';
 import '../../tasks/application/task_controller.dart';
@@ -39,7 +40,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final _scaffoldKey = GlobalKey<ScaffoldState>(); // Key für das Scaffold, um z.B. Snackbars anzuzeigen
+  final _scaffoldKey =
+      GlobalKey<
+        ScaffoldState
+      >(); // 
   late int _groupsRevision;
 
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
@@ -230,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onOpenProfile: () => _scaffoldKey.currentState?.openDrawer(),
                   onOpenProjects: () =>
                       _scaffoldKey.currentState?.openEndDrawer(),
+                  onOpenAssistant: _openProjectChat,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Expanded(
@@ -246,6 +251,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  void _openProjectChat() {
+    // Das ausgewählte Projekt für diesen Chat übernehmen; ohne Auswahl ist die
+    // Chat-Aktion in der Topbar deaktiviert.
+    final project = _projectController.selectedProject;
+    if (project == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ChatScreen(project: project)),
     );
   }
 }

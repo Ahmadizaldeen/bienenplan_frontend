@@ -3,6 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bienenplan_frontend/core/api/api_endpoints.dart';
 
 void main() {
+  test('projectChat builds a project-scoped chat endpoint', () {
+    expect(
+      ApiEndpoints.projectChat(12),
+      '${ApiEndpoints.projectDetail(12)}/chat',
+    );
+  });
+
   group('ApiEndpoints.attachmentUrl', () {
     test('builds a backend URL for a relative upload path', () {
       expect(
