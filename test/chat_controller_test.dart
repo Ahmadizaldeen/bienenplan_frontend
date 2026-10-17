@@ -7,18 +7,14 @@ import 'package:bienenplan_frontend/features/chat/data/chat_repository.dart';
 void main() {
   group('ChatController', () {
     test(
-      'sends the selected project and conversation, then appends answer',
+      'sends the profile conversation without a project, then appends answer',
       () async {
         final repository = _FakeChatRepository();
-        final controller = ChatController(
-          projectId: 12,
-          repository: repository,
-        );
+        final controller = ChatController(repository: repository);
 
         final sent = await controller.sendMessage('  Hallo  ');
 
         expect(sent, isTrue);
-        expect(repository.projectId, 12);
         expect(
           repository.messages?.map((message) => message.toJson()).toList(),
           [
@@ -39,7 +35,6 @@ void main() {
 
     test('removes an unsent message and exposes API error', () async {
       final controller = ChatController(
-        projectId: 12,
         repository: _FakeChatRepository(fail: true),
       );
 
@@ -53,10 +48,7 @@ void main() {
       'rejects a conversation that exceeds the backend byte limit',
       () async {
         final repository = _FakeChatRepository();
-        final controller = ChatController(
-          projectId: 12,
-          repository: repository,
-        );
+        final controller = ChatController(repository: repository);
 
         for (var index = 0; index < 8; index++) {
           expect(await controller.sendMessage('😀' * 1800), isTrue);
@@ -76,15 +68,10 @@ class _FakeChatRepository implements ChatRepositoryContract {
   _FakeChatRepository({this.fail = false});
 
   final bool fail;
-  int? projectId;
   List<ChatMessage>? messages;
 
   @override
-  Future<ChatMessage> sendMessage(
-    int projectId,
-    List<ChatMessage> messages,
-  ) async {
-    this.projectId = projectId;
+  Future<ChatMessage> sendMessage(List<ChatMessage> messages) async {
     this.messages = messages;
     if (fail) {
       throw const ApiException(

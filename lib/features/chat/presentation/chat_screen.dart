@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../projects/data/project_model.dart';
 import '../application/chat_controller.dart';
 import '../data/chat_message.dart';
 import '../data/chat_repository.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.project, this.repository});
+  const ChatScreen({super.key, this.repository});
 
-  final Project project;
   final ChatRepositoryContract? repository;
 
   @override
@@ -19,7 +17,6 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   // Jeder Aufruf startet einen neuen Verlauf; beim Verlassen geht er verloren.
   late final ChatController _controller = ChatController(
-    projectId: widget.project.id,
     repository: widget.repository,
   );
   final _messageController = TextEditingController();
@@ -59,7 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             const Text('BienenPlan-Assistent'),
             Text(
-              widget.project.name,
+              'Alle aktiven Projekte',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -83,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: const Padding(
               padding: EdgeInsets.all(AppSpacing.sm),
               child: Text(
-                'Der Assistent kann sichtbare Projekt- und Aufgabendaten auswerten. Bei Mitgliedern sind Aufgabenstatistiken auf die persönlich sichtbaren Aufgaben begrenzt.',
+                'Der Assistent berücksichtigt alle für dich zugänglichen aktiven Projekte mit deinen sichtbaren Aufgaben und Unteraufgaben. Archivierte Projekte sind ausgeschlossen. Statistiken beziehen sich nur auf diese sichtbaren Daten.',
               ),
             ),
           ),

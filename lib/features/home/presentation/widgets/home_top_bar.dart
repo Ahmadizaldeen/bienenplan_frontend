@@ -73,12 +73,8 @@ class _HomeTopBarState extends State<HomeTopBar> {
       children: [
         IconButton(
           key: const ValueKey('user-profile-assistant'),
-          tooltip: widget.projectController.selectedProject == null
-              ? 'Zuerst ein Projekt auswählen'
-              : 'Projekt-Chat öffnen',
-          onPressed: widget.projectController.selectedProject == null
-              ? null
-              : widget.onOpenAssistant,
+          tooltip: 'Profil-Chat öffnen',
+          onPressed: widget.onOpenAssistant,
           constraints: const BoxConstraints.tightFor(width: 40, height: 48),
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
