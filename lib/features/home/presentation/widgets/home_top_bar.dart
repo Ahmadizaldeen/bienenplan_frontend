@@ -14,6 +14,7 @@ class HomeTopBar extends StatefulWidget {
     required this.onLogout,
     required this.onOpenProfile,
     required this.onOpenProjects,
+    required this.onOpenAssistant,
   });
 
   final UserController userController;
@@ -22,6 +23,7 @@ class HomeTopBar extends StatefulWidget {
   final VoidCallback onLogout;
   final VoidCallback onOpenProfile;
   final VoidCallback onOpenProjects;
+  final VoidCallback onOpenAssistant;
 
   @override
   State<HomeTopBar> createState() => _HomeTopBarState();
@@ -41,11 +43,13 @@ class _HomeTopBarState extends State<HomeTopBar> {
   void _toggleSearch() {
     setState(() {
       _isSearchVisible = !_isSearchVisible;
+      // Die Suche ist noch nicht mit Filtern verbunden; Schließen verwirft den Text.
       if (!_isSearchVisible) _searchController.clear();
     });
   }
 
   Future<void> _refresh() async {
+    // Während eines laufenden Refreshs weitere Klicks ignorieren.
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
     try {
@@ -67,10 +71,24 @@ class _HomeTopBarState extends State<HomeTopBar> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        IconButton(
+          key: const ValueKey('user-profile-assistant'),
+          tooltip: widget.projectController.selectedProject == null
+              ? 'Zuerst ein Projekt auswählen'
+              : 'Projekt-Chat öffnen',
+          onPressed: widget.projectController.selectedProject == null
+              ? null
+              : widget.onOpenAssistant,
+          constraints: const BoxConstraints.tightFor(width: 40, height: 48),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.auto_awesome_outlined),
+        ),
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          width: _isSearchVisible ? (compact ? 190 : 260) : 40,
+          // Auf schmalen Displays Platz für Projektname und Aktionsleiste lassen.
+          width: _isSearchVisible ? (compact ? 150 : 260) : 40,
           height: 48,
           child: Row(
             children: [
