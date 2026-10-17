@@ -1,17 +1,32 @@
 import 'package:flutter/foundation.dart';
 
+import '../../subtasks/data/subtask_model.dart';
+import '../../subtasks/data/subtask_repository.dart';
+import '../../tasks/data/task_attachment.dart';
+import '../../tasks/data/task_attachment_repository.dart';
 import '../data/project_archive_repository.dart';
 import '../data/project_model.dart';
 
 class ProjectArchiveController extends ChangeNotifier {
-  ProjectArchiveController({ProjectArchiveRepository? repository})
-    : _repository = repository ?? ProjectArchiveRepository();
+  ProjectArchiveController({
+    ProjectArchiveRepository? repository,
+    SubtaskRepositoryContract? subtaskRepository,
+    TaskAttachmentRepository? attachmentRepository,
+    this._refreshActiveProjects,
+  }) : _repository = repository ?? ProjectArchiveRepository(),
+       _subtaskRepository = subtaskRepository ?? SubtaskRepository(),
+       _attachmentRepository =
+           attachmentRepository ?? TaskAttachmentRepository();
 
   final ProjectArchiveRepository _repository;
+  final SubtaskRepositoryContract _subtaskRepository;
+  final TaskAttachmentRepository _attachmentRepository;
+  final Future<String?> Function()? _refreshActiveProjects;
   List<Project> projects = const [];
   bool isLoading = false;
   int? restoringId;
   String? errorMessage;
+  String? refreshErrorMessage;
   bool _disposed = false;
 
   void _notify() {
@@ -22,6 +37,7 @@ class ProjectArchiveController extends ChangeNotifier {
   Future<void> load() async {
     isLoading = true;
     errorMessage = null;
+    refreshErrorMessage = null;
     _notify();
     try {
       final result = await _repository.fetchArchivedProjects();
@@ -42,6 +58,10 @@ class ProjectArchiveController extends ChangeNotifier {
     try {
       await _repository.restore(project.id);
       projects = projects.where((item) => item.id != project.id).toList();
+      final refreshActiveProjects = _refreshActiveProjects;
+      if (refreshActiveProjects != null) {
+        refreshErrorMessage = await refreshActiveProjects();
+      }
       return true;
     } catch (error) {
       errorMessage = error.toString();
@@ -51,6 +71,20 @@ class ProjectArchiveController extends ChangeNotifier {
       _notify();
     }
   }
+
+  Future<ArchivedProjectContents> fetchContents(int projectId) =>
+      _repository.fetchContents(projectId);
+
+  Future<(SubtaskList, List<TaskAttachment>)> fetchTaskDetails(
+    int taskId,
+  ) async {
+    final subtasks = await _subtaskRepository.list(taskId);
+    final attachments = await _attachmentRepository.list(taskId);
+    return (subtasks, attachments);
+  }
+
+  Future<Uint8List> downloadAttachment(int taskId, int attachmentId) =>
+      _attachmentRepository.download(taskId, attachmentId);
 
   @override
   void dispose() {

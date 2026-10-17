@@ -35,9 +35,13 @@ class ProjectArchiveScreen extends StatefulWidget {
 class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
   late final _controller = ProjectArchiveController(
     repository: widget.repository,
+    subtaskRepository: widget.subtaskRepository,
+    attachmentRepository: widget.attachmentRepository,
+    refreshActiveProjects: () async {
+      final refreshed = await widget.projectController.loadProjects();
+      return refreshed ? null : widget.projectController.errorMessage;
+    },
   );
-  bool _refreshingActive = false;
-  String? _refreshError;
 
   @override
   void initState() {
@@ -74,22 +78,13 @@ class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
     );
     if (confirmed != true || !mounted) return;
     if (!await _controller.restore(project) || !mounted) return;
-    setState(() {
-      _refreshingActive = true;
-      _refreshError = null;
-    });
-    await widget.projectController.loadProjects();
-    if (!mounted) return;
-    setState(() {
-      _refreshingActive = false;
-      _refreshError = widget.projectController.errorMessage;
-    });
+    final refreshError = _controller.refreshErrorMessage;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _refreshError == null
+          refreshError == null
               ? 'Projekt wiederhergestellt.'
-              : 'Projekt wiederhergestellt, aber die aktive Projektliste konnte nicht aktualisiert werden: $_refreshError',
+              : 'Projekt wiederhergestellt, aber die aktive Projektliste konnte nicht aktualisiert werden: $refreshError',
         ),
       ),
     );
@@ -101,10 +96,7 @@ class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
     body: AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final busy =
-            _controller.isLoading ||
-            _controller.restoringId != null ||
-            _refreshingActive;
+        final busy = _controller.isLoading || _controller.restoringId != null;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -125,9 +117,9 @@ class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
                 _controller.errorMessage!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-            if (_refreshError != null)
+            if (_controller.refreshErrorMessage != null)
               Text(
-                'Aktive Projektliste konnte nicht aktualisiert werden: $_refreshError',
+                'Aktive Projektliste konnte nicht aktualisiert werden: ${_controller.refreshErrorMessage}',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             if (!busy &&
@@ -167,10 +159,7 @@ class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
                                     MaterialPageRoute<void>(
                                       builder: (_) => _ArchivedProjectScreen(
                                         project: project,
-                                        repository: widget.repository,
-                                        subtasks: widget.subtaskRepository,
-                                        attachments:
-                                            widget.attachmentRepository,
+                                        controller: _controller,
                                       ),
                                     ),
                                   ),
@@ -199,15 +188,11 @@ class _ProjectArchiveScreenState extends State<ProjectArchiveScreen> {
 class _ArchivedProjectScreen extends StatefulWidget {
   const _ArchivedProjectScreen({
     required this.project,
-    required this.repository,
-    required this.subtasks,
-    required this.attachments,
+    required this.controller,
   });
 
   final Project project;
-  final ProjectArchiveRepository repository;
-  final SubtaskRepositoryContract subtasks;
-  final TaskAttachmentRepository attachments;
+  final ProjectArchiveController controller;
 
   @override
   State<_ArchivedProjectScreen> createState() => _ArchivedProjectScreenState();
@@ -219,7 +204,7 @@ class _ArchivedProjectScreenState extends State<_ArchivedProjectScreen> {
   @override
   void initState() {
     super.initState();
-    _contents = widget.repository.fetchContents(widget.project.id);
+    _contents = widget.controller.fetchContents(widget.project.id);
   }
 
   @override
@@ -236,7 +221,7 @@ class _ArchivedProjectScreenState extends State<_ArchivedProjectScreen> {
                 Text('Archiv konnte nicht geladen werden: ${snapshot.error}'),
                 TextButton(
                   onPressed: () => setState(() {
-                    _contents = widget.repository.fetchContents(
+                    _contents = widget.controller.fetchContents(
                       widget.project.id,
                     );
                   }),
@@ -281,8 +266,7 @@ class _ArchivedProjectScreenState extends State<_ArchivedProjectScreen> {
                       ))
                         _ArchivedTaskTile(
                           task: task,
-                          subtasks: widget.subtasks,
-                          attachments: widget.attachments,
+                          controller: widget.controller,
                         ),
                     ],
                   ),
@@ -296,14 +280,9 @@ class _ArchivedProjectScreenState extends State<_ArchivedProjectScreen> {
 }
 
 class _ArchivedTaskTile extends StatefulWidget {
-  const _ArchivedTaskTile({
-    required this.task,
-    required this.subtasks,
-    required this.attachments,
-  });
+  const _ArchivedTaskTile({required this.task, required this.controller});
   final Task task;
-  final SubtaskRepositoryContract subtasks;
-  final TaskAttachmentRepository attachments;
+  final ProjectArchiveController controller;
 
   @override
   State<_ArchivedTaskTile> createState() => _ArchivedTaskTileState();
@@ -315,9 +294,7 @@ class _ArchivedTaskTileState extends State<_ArchivedTaskTile> {
   int? _downloading;
 
   Future<(SubtaskList, List<TaskAttachment>)> _load() async {
-    final subtasks = await widget.subtasks.list(widget.task.id);
-    final attachments = await widget.attachments.list(widget.task.id);
-    return (subtasks, attachments);
+    return widget.controller.fetchTaskDetails(widget.task.id);
   }
 
   Future<void> _download(TaskAttachment attachment) async {
@@ -327,7 +304,7 @@ class _ArchivedTaskTileState extends State<_ArchivedTaskTile> {
     });
     try {
       // Der Repository-Download sendet das JWT; eine direkte URL-Navigation nicht.
-      final bytes = await widget.attachments.download(
+      final bytes = await widget.controller.downloadAttachment(
         widget.task.id,
         attachment.id,
       );
