@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../projects/application/project_controller.dart';
+import '../../projects/presentation/project_list_widget.dart';
 import '../../sync/application/change_poller.dart';
 import '../../sync/data/change_repository.dart';
 import '../../tasks/application/task_controller.dart';
 import '../../tasks/presentation/task_container_screen.dart';
 import '../../user/application/user_controller.dart';
-import 'widgets/project_overview_header.dart';
+import 'widgets/home_top_bar.dart';
 import 'widgets/user_profile_sidebar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -38,13 +39,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  bool _isProfileExpanded = false;
-  final _homeContentKey = GlobalKey();
+  final _scaffoldKey = GlobalKey<ScaffoldState>(); // Key für das Scaffold, um z.B. Snackbars anzuzeigen
   late int _groupsRevision;
 
   // HomeScreen besitzt beide Controller zentral, damit Pull-to-Refresh und
-  // der Refresh-Button in ProjectOverviewHeader dieselben Daten neu laden
-  // können, die TaskListScreen und ProjectListWidget anzeigen.
+  // der Refresh-Button dieselben Daten neu laden können.
   late final TaskController _taskController =
       widget.taskController ?? TaskController();
   late final ProjectController _projectController =
@@ -151,6 +150,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text(
+                  'Profil & Einstellungen',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                trailing: IconButton(
+                  key: const ValueKey('profile-sidebar-close'),
+                  tooltip: 'Menü schließen',
+                  onPressed: () => _scaffoldKey.currentState?.closeDrawer(),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: UserProfileSidebar(
+                    onLogout: _handleLogout,
+                    projectController: _projectController,
+                    userController: _userController,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      endDrawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text(
+                  'Projekte',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                trailing: IconButton(
+                  key: const ValueKey('projects-sidebar-close'),
+                  tooltip: 'Projektliste schließen',
+                  onPressed: () => _scaffoldKey.currentState?.closeEndDrawer(),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: ProjectListWidget(controller: _projectController),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -160,76 +218,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 900;
-              final isNarrowPhone = constraints.maxWidth < 600;
-
-              final sidebar = UserProfileSidebar(
-                onLogout: _handleLogout,
-                isExpanded: _isProfileExpanded,
-                onToggle: () => setState(() {
-                  _isProfileExpanded = !_isProfileExpanded;
-                }),
-                projectController: _projectController,
-                userController: _userController,
-              );
-              final content = _HomeContent(
-                key: _homeContentKey,
-                taskController: _taskController,
-                projectController: _projectController,
-                userController: _userController,
-                changePoller: _changePoller,
-                onRefresh: _refreshAll,
-                leading: isNarrowPhone ? sidebar : null,
-              );
-
-              // Auf breiten Ansichten steht das ausgeklappte Profil neben dem Inhalt;
-              // eingeklappt wird es zur Leiste oberhalb des Inhalts.
-              if (isWide && _isProfileExpanded) {
-                final sidebarWidth =
-                    ((constraints.maxWidth -
-                                2 * AppSpacing.lg -
-                                AppSpacing.lg) /
-                            3)
-                        .clamp(260.0, 420.0);
-
-                return Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: sidebarWidth,
-                        child: SingleChildScrollView(child: sidebar),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(child: content),
-                    ],
-                  ),
-                );
-              }
-
-              return Padding(
-                padding: EdgeInsets.all(
-                  isNarrowPhone ? AppSpacing.sm : AppSpacing.md,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              children: [
+                HomeTopBar(
+                  userController: _userController,
+                  projectController: _projectController,
+                  onRefresh: _refreshAll,
+                  onLogout: _handleLogout,
+                  onOpenProfile: () => _scaffoldKey.currentState?.openDrawer(),
+                  onOpenProjects: () =>
+                      _scaffoldKey.currentState?.openEndDrawer(),
                 ),
-                child: isNarrowPhone
-                    ? content
-                    : Column(
-                        children: [
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: constraints.maxHeight * 0.5,
-                            ),
-                            child: SingleChildScrollView(child: sidebar),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Expanded(child: content),
-                        ],
-                      ),
-              );
-            },
+                const SizedBox(height: AppSpacing.md),
+                Expanded(
+                  child: _HomeContent(
+                    taskController: _taskController,
+                    projectController: _projectController,
+                    userController: _userController,
+                    changePoller: _changePoller,
+                    onRefresh: _refreshAll,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -239,13 +252,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
-    super.key,
     required this.taskController,
     required this.projectController,
     required this.userController,
     required this.changePoller,
     required this.onRefresh,
-    this.leading,
   });
 
   final TaskController taskController;
@@ -253,7 +264,6 @@ class _HomeContent extends StatelessWidget {
   final UserController userController;
   final ChangePoller changePoller;
   final Future<void> Function() onRefresh;
-  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -265,13 +275,7 @@ class _HomeContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (leading != null) ...[
-              leading!,
-              const SizedBox(height: AppSpacing.md),
-            ],
             _SyncStatusBanner(poller: changePoller),
-            ProjectOverviewHeader(onRefresh: onRefresh),
-            const SizedBox(height: AppSpacing.md),
             AnimatedBuilder(
               animation: projectController,
               builder: (context, _) {

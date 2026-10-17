@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/routing/app_router.dart';
-import '../presentation/start_screen.dart';
 import '../../home/presentation/home_screen.dart';
+import '../application/auth_session_controller.dart';
+import 'start_screen.dart';
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key, Future<String?> Function()? tokenReader})
-    : _tokenReader = tokenReader ?? _defaultTokenReader;
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key, this.tokenReader, this.sessionController});
 
-  static Future<String?> _defaultTokenReader() => ApiClient().getToken();
+  final Future<String?> Function()? tokenReader;
+  final AuthSessionController? sessionController;
 
-  final Future<String?> Function() _tokenReader;
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final AuthSessionController _sessionController =
+      widget.sessionController ?? AuthSessionController();
+  late final Future<String?> _token =
+      widget.tokenReader?.call() ?? _sessionController.getToken();
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String?>(
-      future: _tokenReader(),
+      future: _token,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

@@ -7,6 +7,7 @@ import 'package:bienenplan_frontend/features/projects/application/project_contro
 import 'package:bienenplan_frontend/features/projects/data/project_local_store.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_model.dart';
 import 'package:bienenplan_frontend/features/projects/data/project_repository.dart';
+import 'package:bienenplan_frontend/features/projects/presentation/project_list_widget.dart';
 import 'package:bienenplan_frontend/features/sync/data/change_feed.dart';
 import 'package:bienenplan_frontend/features/sync/data/change_repository.dart';
 import 'package:bienenplan_frontend/features/tasks/application/task_controller.dart';
@@ -23,7 +24,7 @@ void main() {
   for (final theme in [AppTheme.light, AppTheme.dark]) {
     for (final width in [320.0, 390.0, 600.0, 800.0, 1280.0]) {
       testWidgets(
-        'collapsible home layout fits ${width.toInt()}px in ${theme.brightness.name} mode',
+        'home toolbar and drawer fit ${width.toInt()}px in ${theme.brightness.name} mode',
         (tester) async {
           tester.view.physicalSize = Size(width, 800);
           tester.view.devicePixelRatio = 1;
@@ -60,84 +61,107 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(tester.takeException(), isNull);
-          expect(find.text('Projektübersicht'), findsOneWidget);
+          expect(find.text('Projektübersicht'), findsNothing);
+          expect(find.byType(TextField), findsNothing);
           expect(
-            find.text('Suche nach Aufgaben oder Projekten'),
+            find.byKey(const ValueKey('user-profile-refresh')),
             findsOneWidget,
           );
-          final searchRect = tester.getRect(find.byType(TextField).first);
-          final refreshRect = tester.getRect(
-            find.byKey(const ValueKey('project-overview-refresh')),
-          );
-          final toggleRect = tester.getRect(
-            find.byKey(const ValueKey('project-overview-toggle')),
+          expect(
+            find.byKey(const ValueKey('user-profile-logout')),
+            findsOneWidget,
           );
           expect(
-            (searchRect.center.dy - refreshRect.center.dy).abs(),
-            lessThan(1),
+            find.byKey(const ValueKey('user-profile-search-toggle')),
+            findsOneWidget,
           );
           expect(
-            (searchRect.center.dy - toggleRect.center.dy).abs(),
-            lessThan(1),
+            find.byKey(const ValueKey('home-current-project')),
+            findsOneWidget,
           );
+          expect(find.text('Hallo '), findsOneWidget);
+          expect(find.text('Aktuelles Projekt'), findsOneWidget);
+          final avatarRect = tester.getRect(
+            find.byKey(const ValueKey('home-profile-avatar')),
+          );
+          final profileBarRect = tester.getRect(
+            find.byKey(const ValueKey('home-top-bar')),
+          );
+          final logoutButtonRect = tester.getRect(
+            find.byKey(const ValueKey('user-profile-logout')),
+          );
+          expect(profileBarRect.left, closeTo(AppSpacing.md, 1));
+          expect(profileBarRect.contains(avatarRect.topLeft), isTrue);
+          expect(profileBarRect.contains(logoutButtonRect.bottomRight), isTrue);
           await tester.tap(
-            find.byKey(const ValueKey('project-overview-toggle')),
+            find.byKey(const ValueKey('user-profile-search-toggle')),
           );
           await tester.pumpAndSettle();
           expect(find.text('Projektübersicht'), findsNothing);
           expect(
-            find.text('Suche nach Aufgaben oder Projekten'),
+            find.byKey(const ValueKey('user-profile-search-field')),
             findsOneWidget,
           );
+          final searchFieldRect = tester.getRect(
+            find.byKey(const ValueKey('user-profile-search-field')),
+          );
+          expect(profileBarRect.contains(searchFieldRect.topLeft), isTrue);
+          expect(
+            find.byKey(const ValueKey('user-profile-refresh')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const ValueKey('user-profile-logout')),
+            findsOneWidget,
+          );
+          await tester.enterText(
+            find.byKey(const ValueKey('user-profile-search-field')),
+            'lokale Suche',
+          );
+          expect(find.text('lokale Suche'), findsOneWidget);
           await tester.tap(
-            find.byKey(const ValueKey('project-overview-toggle')),
+            find.byKey(const ValueKey('user-profile-search-toggle')),
           );
           await tester.pumpAndSettle();
           expect(
-            find.text('Suche nach Aufgaben oder Projekten'),
-            findsOneWidget,
+            find.byKey(const ValueKey('user-profile-search-field')),
+            findsNothing,
           );
           expect(find.text('Abmelden'), findsNothing);
-          final toggle = tester.widget<TextButton>(
-            find.byKey(const ValueKey('profile-project-toggle')),
-          );
-          expect(
-            toggle.style?.backgroundColor?.resolve({}),
-            theme.colorScheme.surfaceContainer,
-          );
-          expect(
-            toggle.style?.foregroundColor?.resolve({}),
-            theme.colorScheme.onSurface,
-          );
-          await tester.tap(
-            find.byKey(const ValueKey('profile-project-toggle')),
-          );
+          await tester.tap(find.byKey(const ValueKey('home-user-name')));
+          await tester.pumpAndSettle();
+          expect(find.text('Profil & Einstellungen'), findsOneWidget);
+          await tester.tap(find.byKey(const ValueKey('profile-sidebar-close')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const ValueKey('home-profile-avatar')));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          expect(find.text('Profil & Einstellungen'), findsOneWidget);
           expect(find.text('Abmelden'), findsOneWidget);
-
-          await tester.tap(
-            find.byKey(const ValueKey('profile-project-toggle')),
+          expect(find.text('Zweites Projekt'), findsNothing);
+          expect(
+            find.byKey(const ValueKey('project-info-button-2')),
+            findsNothing,
           );
+
+          await tester.tap(find.byKey(const ValueKey('profile-sidebar-close')));
           await tester.pumpAndSettle();
           expect(find.text('Abmelden'), findsNothing);
           expect(projectController.selectedProject?.id, 1);
           expect(projectRepository.fetchCount, 1);
           expect(userRepository.fetchCount, 1);
 
-          await tester.tap(
-            find.byKey(const ValueKey('profile-project-toggle')),
-          );
+          await tester.tap(find.byKey(const ValueKey('home-current-project')));
           await tester.pumpAndSettle();
+          expect(find.text('Projekte'), findsOneWidget);
+          expect(find.text('Profil & Einstellungen'), findsNothing);
+          expect(find.text('Abmelden'), findsNothing);
           await tester.ensureVisible(find.text('Zweites Projekt'));
           await tester.tap(find.text('Zweites Projekt'));
           await tester.pumpAndSettle();
           expect(projectController.selectedProject?.id, 2);
-          await tester.ensureVisible(
-            find.byKey(const ValueKey('profile-project-toggle')),
-          );
           await tester.tap(
-            find.byKey(const ValueKey('profile-project-toggle')),
+            find.byKey(const ValueKey('projects-sidebar-close')),
           );
           await tester.pumpAndSettle();
           expect(find.text('Zweites Projekt'), findsOneWidget);
@@ -162,30 +186,57 @@ void main() {
     }
   }
 
-  testWidgets('collapsed menu handles missing user and project', (
+  testWidgets('profile drawer renders without user and project controllers', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: UserProfileSidebar(
-            onLogout: () {},
-            isExpanded: false,
-            onToggle: () {},
+          body: SingleChildScrollView(
+            child: UserProfileSidebar(onLogout: () {}),
           ),
         ),
       ),
     );
 
-    expect(find.text('Benutzer'), findsOneWidget);
-    expect(find.text('Kein Projekt'), findsOneWidget);
-    expect(find.text('Abmelden'), findsNothing);
+    expect(find.text('Einstellungen'), findsOneWidget);
+    expect(find.text('Abmelden'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('profile toggle preserves search and container states', (
+  testWidgets('each project info button opens its statistics page', (
     tester,
   ) async {
+    final controller = ProjectController(
+      projectRepository: _FakeProjectRepository(),
+      projectLocalStore: _FakeProjectLocalStore(),
+    );
+    await controller.loadProjects();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ProjectListWidget(controller: controller)),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('project-info-button-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('project-info-button-2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('project-info-button-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Zweites Projekt'), findsOneWidget);
+    expect(find.text('Projektstatistiken'), findsOneWidget);
+    expect(find.text('Aktiv'), findsOneWidget);
+    expect(find.text('Erledigt'), findsOneWidget);
+    expect(find.text('Heute'), findsOneWidget);
+    expect(find.text('Weitere Statistiken folgen.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile drawer preserves container state', (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -216,26 +267,27 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('project-overview-toggle')));
-    await tester.pumpAndSettle();
+    final topBar = tester.getRect(find.byKey(const ValueKey('home-top-bar')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('container-toggle-1')),
+    );
+    final firstContainer = tester.getRect(
+      find.byKey(const ValueKey('container-toggle-1')),
+    );
+    expect(topBar.bottom, lessThan(firstContainer.top));
+
     await tester.ensureVisible(
       find.byKey(const ValueKey('container-toggle-1')),
     );
     await tester.tap(find.byKey(const ValueKey('container-toggle-1')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('profile-project-toggle')));
+    await tester.tap(find.byKey(const ValueKey('home-profile-avatar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('profile-project-toggle')));
+    await tester.tap(find.byKey(const ValueKey('profile-sidebar-close')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Suche nach Aufgaben oder Projekten'), findsOneWidget);
     expect(find.text('Projektübersicht'), findsNothing);
-    expect(find.text('Persistenz-Testaufgabe'), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('project-overview-toggle')));
-    await tester.pumpAndSettle();
-    expect(find.text('Projektübersicht'), findsOneWidget);
     expect(find.text('Persistenz-Testaufgabe'), findsNothing);
 
     await tester.ensureVisible(

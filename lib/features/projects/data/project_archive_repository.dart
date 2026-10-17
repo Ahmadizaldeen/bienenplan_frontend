@@ -14,7 +14,13 @@ class ArchivedProjectContents {
   final List<Task> tasks;
 }
 
-class ProjectArchiveRepository {
+abstract class ProjectArchiveRepositoryContract {
+  Future<List<Project>> fetchArchivedProjects();
+  Future<void> restore(int projectId);
+  Future<ArchivedProjectContents> fetchContents(int projectId);
+}
+
+class ProjectArchiveRepository implements ProjectArchiveRepositoryContract {
   ProjectArchiveRepository({ApiClient? apiClient})
     : _apiClient = apiClient ?? ApiClient();
 
@@ -27,15 +33,18 @@ class ProjectArchiveRepository {
     return response.map((item) => item as Map<String, dynamic>).toList();
   }
 
+  @override
   Future<List<Project>> fetchArchivedProjects() async =>
       _items(await _apiClient.get(ApiEndpoints.archivedProjects))
           .map(Project.fromJson)
           .toList();
 
+  @override
   Future<void> restore(int projectId) async {
     await _apiClient.post(ApiEndpoints.restoreProject(projectId), {});
   }
 
+  @override
   Future<ArchivedProjectContents> fetchContents(int projectId) async {
     // Der explizite Filter erlaubt dem Backend den gezielten Admin-Archivzugriff;
     // ungefilterte Listen enthalten nur aktive Projekte.

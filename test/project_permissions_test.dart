@@ -343,8 +343,6 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               child: UserProfileSidebar(
-                isExpanded: true,
-                onToggle: () {},
                 onLogout: () {},
                 projectController: projects,
                 userController: users,

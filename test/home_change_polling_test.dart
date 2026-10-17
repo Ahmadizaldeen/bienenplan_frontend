@@ -330,7 +330,7 @@ void main() {
     void spy() => sawLoading |= h.tasks.isLoading;
     h.tasks.addListener(spy);
     addTearDown(() => h.tasks.removeListener(spy));
-    await tester.tap(find.byKey(const ValueKey('project-overview-refresh')));
+    await tester.tap(find.byKey(const ValueKey('user-profile-refresh')));
     await tester.pump();
     expect(sawLoading, isTrue);
     expect(h.tasksRepo.loads, 2);
@@ -343,9 +343,7 @@ void main() {
   testWidgets('logout and dispose stop polling', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await tester.tap(find.byKey(const ValueKey('profile-project-toggle')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Abmelden'));
+    await tester.tap(find.byKey(const ValueKey('user-profile-logout')));
     await tester.pump();
     expect(h.logouts, 1);
     await tester.pump(const Duration(minutes: 1));

@@ -5,6 +5,7 @@ import '../../../core/theme/glass_container.dart';
 import '../application/project_controller.dart';
 import '../data/project_model.dart';
 import 'project_editor_dialog.dart';
+import 'project_info_screen.dart';
 
 class ProjectListWidget extends StatefulWidget {
   const ProjectListWidget({super.key, this.controller});
@@ -112,6 +113,11 @@ class _ProjectListWidgetState extends State<ProjectListWidget> {
                   project: project,
                   active: project.id == _controller.selectedProject?.id,
                   onSelect: () => _controller.selectProject(project.id),
+                  onShowInfo: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ProjectInfoScreen(project: project),
+                    ),
+                  ),
                   onEditProject:
                       project.canEdit ||
                           project.canDelete ||
@@ -143,12 +149,14 @@ class _ProjectTile extends StatelessWidget {
     required this.project,
     required this.active,
     required this.onSelect,
+    required this.onShowInfo,
     required this.onEditProject,
   });
 
   final Project project;
   final bool active;
   final VoidCallback onSelect;
+  final VoidCallback onShowInfo;
   final VoidCallback? onEditProject;
 
   @override
@@ -209,6 +217,12 @@ class _ProjectTile extends StatelessWidget {
                 size: 14,
                 color: scheme.primary,
               ),
+            IconButton(
+              key: ValueKey('project-info-button-${project.id}'),
+              tooltip: 'Statistiken für ${project.name} anzeigen',
+              onPressed: onShowInfo,
+              icon: const Icon(Icons.info_outline),
+            ),
             if (onEditProject != null)
               IconButton(
                 tooltip: 'Projekt bearbeiten',

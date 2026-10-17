@@ -9,10 +9,9 @@ import '../data/auth_repository.dart';
 import 'widgets/honeycomb_widget.dart';
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({super.key, AuthRepositoryContract? authRepository})
-    : authRepository = authRepository ?? AuthRepository();
+  const LoginScreen({super.key, this.authRepository});
 
-  final AuthRepositoryContract authRepository;
+  final AuthRepositoryContract? authRepository;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

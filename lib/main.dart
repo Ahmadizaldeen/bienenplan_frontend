@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/application/auth_gate.dart';
+import 'features/auth/presentation/auth_gate.dart';
 
 // Einstiegspunkt der Flutter-Anwendung.
 void main() {

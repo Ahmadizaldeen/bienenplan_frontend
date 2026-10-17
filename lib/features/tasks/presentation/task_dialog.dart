@@ -31,7 +31,7 @@ Future<bool> showTaskDialog(
       containerId: containerId,
       projectId: projectId ?? task?.projectId,
       task: task,
-      subtaskRepository: subtaskRepository ?? SubtaskRepository(),
+      subtaskRepository: subtaskRepository,
     ),
   );
   return result ?? false;
@@ -41,16 +41,16 @@ class _TaskDialog extends StatefulWidget {
   const _TaskDialog({
     required this.controller,
     required this.containerId,
+    this.subtaskRepository,
     this.projectId,
     this.task,
-    required this.subtaskRepository,
   });
 
   final TaskController controller;
   final int containerId;
+  final SubtaskRepositoryContract? subtaskRepository;
   final int? projectId;
   final Task? task;
-  final SubtaskRepositoryContract subtaskRepository;
 
   @override
   State<_TaskDialog> createState() => _TaskDialogState();
@@ -464,7 +464,11 @@ class _TaskDialogState extends State<_TaskDialog> {
   Future<bool> _saveDraftSubtasks(int taskId) async {
     while (_draftSubtasks.isNotEmpty) {
       try {
-        await widget.subtaskRepository.create(taskId, _draftSubtasks.first);
+        await widget.controller.createSubtask(
+          taskId,
+          _draftSubtasks.first,
+          repository: widget.subtaskRepository,
+        );
       } catch (error) {
         if (!mounted) return false;
         setState(() {
@@ -486,7 +490,10 @@ class _TaskDialogState extends State<_TaskDialog> {
     var incompleteCount = _draftSubtasks.length;
     if (taskId != null) {
       try {
-        final subtasks = await widget.subtaskRepository.list(taskId);
+        final subtasks = await widget.controller.fetchSubtasks(
+          taskId,
+          repository: widget.subtaskRepository,
+        );
         if (!mounted) return false;
         incompleteCount += subtasks.items
             .where((item) => !item.completed)
@@ -1308,7 +1315,8 @@ class _TaskDialogState extends State<_TaskDialog> {
       ),
       child: SubtaskSection(
         taskId: _taskId,
-        repository: widget.subtaskRepository,
+        repository:
+            widget.subtaskRepository ?? widget.controller.subtaskRepository,
         disabled: _isSaving || _isDeleting || _isUploading,
         draftSubtasks: _draftSubtasks,
         onDraftSubtasksChanged: (subtasks) {

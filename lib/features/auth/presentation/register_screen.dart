@@ -10,10 +10,9 @@ import '../data/auth_repository.dart';
 import 'widgets/register_liquid_background.dart';
 
 class RegisterScreen extends StatefulWidget {
-  RegisterScreen({super.key, AuthRepositoryContract? authRepository})
-    : authRepository = authRepository ?? AuthRepository();
+  const RegisterScreen({super.key, this.authRepository});
 
-  final AuthRepositoryContract authRepository;
+  final AuthRepositoryContract? authRepository;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
